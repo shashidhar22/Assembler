@@ -42,7 +42,7 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
     read2 = fastq[1]
     outdir  = os.path.abspath(outdir)
     sga_file = '{0}/sgaout.fastq'.format(outdir)
-    index_file = '{0}/sgaout.bwt'.format(outdir)
+    index_file = '{0}/sgaout'.format(outdir)
     if force != True and os.path.exists(sga_file):
         print('Skipping pre preprocess')
     else:
@@ -52,10 +52,10 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
         run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
         run_pre_process.wait()
         run_pre_process = None
-    if force != True and os.path.exists(index_file):
+    if force != True and os.path.exists(index_file+'.bwt'):
         print('Skipping index')
     else:
-        sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8',
+        sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8', '-p', index_file,
                     sga_file]
         print('Running command : {0}'.format(' '.join(sga_index)))
         run_sga_index = subprocess.Popen(sga_index,  shell=False)
@@ -71,7 +71,7 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
     run_pre_process.wait()
     run_pre_process = None
     pool = Pool(processes=int(len(krange)))
-    results = pool.map(runCorrect, zip(repeat(sga_file), repeat(sga_index),
+    results = pool.map(runCorrect, zip(repeat(sga_file), repeat(index_file),
                 krange, repeat(outdir)))
     return
 
