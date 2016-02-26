@@ -24,6 +24,8 @@ def subSample(fastq, outdir, size=1000000, readlen=0):
             SeqIO.write(read1, outfiler1, "fastq")
             SeqIO.write(read2, outfiler2, "fastq")
             count += 1
+        elif count > size:
+            break
         else:
             continue
     return(outputr1, outputr2)
