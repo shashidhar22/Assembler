@@ -81,8 +81,8 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
 
 def runKan(arguments):
     fastq = [arguments[0], arguments[1]]
-    outdir = arguments[1]
-    ksize = arguments[2]
+    outdir = arguments[2]
+    ksize = arguments[3]
     outfile = '{0}/sample.{1}.kc'.format(outdir, ksize)
     kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
     kanalyze_cmd = [kanalyze, '-k', ksize, '--minsize', '15', '-m', 'dec', '-o'
