@@ -104,9 +104,10 @@ if __name__ == '__main__':
         default=1000000, help='Number of reads subsampled.')
     pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
         default='kan', choices=['sga','kan'], help='Mode of optimization')
+    pbrazi.add_argument('--force', action='store_true', help='Force overwrite of results')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.0')
     opts = pbrazi.parse_args()
     if opts.mode == 'sga':
-        metrics = sgaCorrect(opts.fastq, opts.outdir, opts.krange, opts.samplesize)
+        metrics = sgaCorrect(opts.fastq, opts.outdir, opts.krange, opts.samplesize, force)
     else:
         metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize)
