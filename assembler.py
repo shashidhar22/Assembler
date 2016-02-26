@@ -80,7 +80,7 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
     return
 
 def runKan(arguments):
-    fastq = arguments[0]
+    fastq = [arguments[0], arguments[1]]
     outdir = arguments[1]
     ksize = arguments[2]
     outfile = '{0}/sample.{1}.kc'.format(outdir, ksize)
@@ -95,9 +95,8 @@ def kmerOpt(fastq, outdir, krange=[35,45,55,65,75], size=10000000, readlen=0):
     outdir = os.path.abspath(outdir)
     read1, read2 = subSample(fastq, outdir, size, readlen)
     kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
-    fastq = (read1, read2)
     pool = Pool(processes=2)
-    results = pool.map(runKan, zip(repeat(fastq), repeat(outdir), krange))
+    results = pool.map(runKan, zip(repeat(read1), reapeat(read2), repeat(outdir), krange))
     return
 
 
