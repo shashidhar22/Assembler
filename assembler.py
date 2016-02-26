@@ -68,7 +68,7 @@ if __name__ == '__main__':
         help='Input fastq files, read1 followed by read2')
     pbrazi.add_argument('-o', '--outdir', type=str, dest='outdir', default=None,
         help='Output directory')
-    pbrazi.add_argument('-k', '--krange', type=int, dest='krange', nargs='+'
+    pbrazi.add_argument('-k', '--krange', type=int, dest='krange', nargs='+',
         default=[35, 37, 39, 41, 43, 45], help='k-mer range to test correction')
     pbrazi.add_argument('-s', '--size', type=int, dest='samplesize',
         default=1000000, help='Number of reads subsampled.')
