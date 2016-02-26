@@ -37,7 +37,7 @@ def runCorrect(sga_file, sga_index, ksize, outdir):
     run_sga_correct = None
     return(metric)
 
-def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, readlen):
+def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, readlen=0):
     read1 = fastq[0]
     read2 = fastq[1]
     outdir  = os.path.abspath(outdir)
