@@ -18,12 +18,14 @@ def subSample(fastq, outdir, size=1000000, readlen=0):
     outfiler1 = open(outputr1, 'w')
     outfiler2 = open(outputr2, 'w')
     print('Subsampling {0} reads from raw data'.format(size))
-    for count, (read1, read2) in enumerate(zip(recs1, recs2)):
+    count  = 0
+    for read1, read2 in zip(recs1, recs2):
         if count <= size and len(read1.seq) >= readlen and len(read2.seq) >= readlen:
             SeqIO.write(read1, outfiler1, "fastq")
             SeqIO.write(read2, outfiler2, "fastq")
+            count += 1
         else:
-            break
+            continue
     return(outfiler1, outfiler2)
 
 def runCorrect(arguments):
