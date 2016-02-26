@@ -26,7 +26,11 @@ def subSample(fastq, outdir, size=1000000, readlen=0):
             break
     return(outfiler1, outfiler2)
 
-def runCorrect(sga_file, sga_index, ksize, outdir):
+def runCorrect(arguments):
+    sga_file = arguments[0]
+    sga_index = arguments[1]
+    ksize = arguments[2]
+    outdir = arguments[3]
     outfile = '{0}/subsample_corrected.{1}.ec.fq'.format(outdir, ksize)
     metric = '{0}/subsample.{1}.metrics.txt'.format(outdir, ksize)
     sga_correct = ['sga', 'correct', '-p', sga_index, '-k', ksize,
@@ -75,7 +79,10 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
                 krange, repeat(outdir)))
     return
 
-def runKan(fastq, outdir, ksize):
+def runKan(arguments):
+    fastq = arguments[0]
+    outdir = arguments[1]
+    ksize = arguments[2]
     outfile = '{0}/sample.{1}.kc'.format(outdir, ksize)
     kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
     kanalyze_cmd = [kanalyze, '-k', ksize, '--minsize', '15', '-m', 'dec', '-o'
