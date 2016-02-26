@@ -24,6 +24,10 @@ def subSample(fastq, outdir, size=1000000, readlen=0):
             SeqIO.write(read1, outfiler1, "fastq")
             SeqIO.write(read2, outfiler2, "fastq")
             count += 1
+        elif size == 0 and len(read1.seq) >= readlen and len(read2.seq) >= readlen:
+            SeqIO.write(read1, outfiler1, "fastq")
+            SeqIO.write(read2, outfiler2, "fastq")
+            count = -1
         elif count > size:
             break
         else:
@@ -117,7 +121,7 @@ if __name__ == '__main__':
     pbrazi.add_argument('-k', '--krange', type=int, dest='krange', nargs='+',
         default=[35, 37, 39, 41, 43, 45], help='k-mer range to test correction')
     pbrazi.add_argument('-s', '--size', type=int, dest='samplesize',
-        default=1000000, help='Number of reads subsampled.')
+        default=1000000, help='Number of reads subsampled. Set size == 0 for subsampling based on read length alone')
     pbrazi.add_argument('-l', '--readlen', type=int, dest='readlen',
         default=0, help='Minimum read length for each read pair.')
     pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
