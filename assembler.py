@@ -87,7 +87,7 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
         run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
         run_pre_process.wait()
         run_pre_process = None
-    pool = Pool(processes=int(len(krange)))
+    pool = Pool(processes=2)
     results = pool.map(runCorrect, zip(repeat(sga_file), repeat(index_file),
                 krange, repeat(outdir)))
     return
