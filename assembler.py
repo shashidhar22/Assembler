@@ -96,7 +96,7 @@ if __name__ == '__main__':
         default=[35, 37, 39, 41, 43, 45], help='k-mer range to test correction')
     pbrazi.add_argument('-s', '--size', type=int, dest='samplesize',
         default=1000000, help='Number of reads subsampled.')
-    pbrazi.add_argument('-m', '--mode', type=int, dest='mode',
+    pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
         default='kan', choices=['sga','kan'], help='Mode of optimization')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.0')
     opts = pbrazi.parse_args()
