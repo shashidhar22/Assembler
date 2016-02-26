@@ -7,7 +7,7 @@ from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
 
-def subSample(fastq, outdir, size=1000000):
+def subSample(fastq, outdir, size=1000000, readlen=0):
     fastqr1 = open(fastq[0])
     fastqr2 = open(fastq[1])
     recs1 = SeqIO.parse(fastqr1, 'fastq')
@@ -19,7 +19,7 @@ def subSample(fastq, outdir, size=1000000):
     outfiler2 = open(outputr2, 'w')
     print('Subsampling {0} reads from raw data'.format(size))
     for count, (read1, read2) in enumerate(zip(recs1, recs2)):
-        if count <= size:
+        if count <= size and len(read1.seq) >= readlen and len(read2.seq) >= readlen:
             SeqIO.write(recs1, outfiler1, "fastq")
             SeqIO.write(recs2, outfiler2, "fastq")
         else:
@@ -37,7 +37,7 @@ def runCorrect(sga_file, sga_index, ksize, outdir):
     run_sga_correct = None
     return(metric)
 
-def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000):
+def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, readlen):
     read1 = fastq[0]
     read2 = fastq[1]
     outdir  = os.path.abspath(outdir)
@@ -61,7 +61,7 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000):
         run_sga_index = subprocess.Popen(sga_index,  shell=False)
         run_sga_index.wait()
         run_sga_index = None
-    read1, read2 = subSample(fastq, outdir)
+    read1, read2 = subSample(fastq, outdir, size, readlen)
     sga_index = '{0}/sgaout'.format(outdir)
     sga_file = '{0}/subsample.fastq'.format(outdir)
     sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
@@ -84,9 +84,9 @@ def runKan(fastq, outdir, ksize):
     run_kanalyze = None
     return(outfile)
 
-def kmerOpt(fastq, outdir, krange=[35,45,55,65,75], size=10000000):
+def kmerOpt(fastq, outdir, krange=[35,45,55,65,75], size=10000000, readlen=0):
     outdir = os.path.abspath(outdir)
-    read1, read2 = subSample(fastq, outdir, size)
+    read1, read2 = subSample(fastq, outdir, size, readlen)
     kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
     pool = Pool(processes=2)
     results = pool.map(runKan, zip(repeat([read1, read2]), repeat(outdir), krange))
@@ -96,19 +96,23 @@ def kmerOpt(fastq, outdir, krange=[35,45,55,65,75], size=10000000):
 if __name__ == '__main__':
     pbrazi =  argparse.ArgumentParser(prog='assembler')
     pbrazi.add_argument('-f', '--fastq', type=str, dest='fastq', nargs='+',
-        help='Input fastq files, read1 followed by read2')
+        help='Input fastq files, read1 followed by read2.')
     pbrazi.add_argument('-o', '--outdir', type=str, dest='outdir', default=None,
-        help='Output directory')
+        help='Output directory.')
     pbrazi.add_argument('-k', '--krange', type=int, dest='krange', nargs='+',
         default=[35, 37, 39, 41, 43, 45], help='k-mer range to test correction')
     pbrazi.add_argument('-s', '--size', type=int, dest='samplesize',
         default=1000000, help='Number of reads subsampled.')
+    pbrazi.add_argument('-l', '--readlen', type=int, dest='readlen',
+        default=0, help='Minimum read length for each read pair.')
     pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
-        default='kan', choices=['sga','kan'], help='Mode of optimization')
-    pbrazi.add_argument('--force', action='store_true', help='Force overwrite of results')
+        default='kan', choices=['sga','kan'], help='Mode of optimization.')
+    pbrazi.add_argument('--force', action='store_true', help='Force overwrite of results.')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.0')
     opts = pbrazi.parse_args()
     if opts.mode == 'sga':
-        metrics = sgaCorrect(opts.fastq, opts.outdir, opts.krange, opts.samplesize, opts.force)
+        metrics = sgaCorrect(opts.fastq, opts.outdir, opts.force, opts.krange,
+                            opts.samplesize, opts.readlen)
     else:
-        metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize)
+        metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize,
+                        opts.readlen)
