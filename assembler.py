@@ -42,7 +42,7 @@ def runCorrect(arguments):
     outfile = '{0}/subsample_corrected.{1}.ec.fq'.format(outdir, ksize)
     metric = '{0}/subsample.{1}.metrics.txt'.format(outdir, ksize)
     sga_correct = ['sga', 'correct', '-p', sga_index, '-k', str(ksize),
-                    '--learn', sga_file]
+                    '--learn', sga_file, '-o', outfile, '--metrics', metric]
     print('Running command : {0}'.format(' '.join(sga_correct)))
     run_sga_correct = subprocess.Popen(sga_correct, shell=False)
     run_sga_correct.wait()
@@ -73,14 +73,20 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
         run_sga_index = subprocess.Popen(sga_index,  shell=False)
         run_sga_index.wait()
         run_sga_index = None
-    read1, read2 = subSample(fastq, outdir, size, readlen)
+    if force != True and os.path.exists('{0}/subsample_r1.fastq'.format(outdir)):
+        print('Skipping subsampling')
+    else:
+        read1, read2 = subSample(fastq, outdir, size, readlen)
     sga_file = '{0}/subsample.fastq'.format(outdir)
-    sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
-                        '>', sga_file]
-    print('Running command : {0}'.format(' '.join(sga_pre_process)))
-    run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
-    run_pre_process.wait()
-    run_pre_process = None
+    if force != True and os.path.exists(sga_file):
+        print('Skipping subssample preprocessing')
+    else:
+        sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
+                                '>', sga_file]
+        print('Running command : {0}'.format(' '.join(sga_pre_process)))
+        run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
+        run_pre_process.wait()
+        run_pre_process = None
     pool = Pool(processes=int(len(krange)))
     results = pool.map(runCorrect, zip(repeat(sga_file), repeat(index_file),
                 krange, repeat(outdir)))
