@@ -108,6 +108,6 @@ if __name__ == '__main__':
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.0')
     opts = pbrazi.parse_args()
     if opts.mode == 'sga':
-        metrics = sgaCorrect(opts.fastq, opts.outdir, opts.krange, opts.samplesize, force)
+        metrics = sgaCorrect(opts.fastq, opts.outdir, opts.krange, opts.samplesize, opts.force)
     else:
         metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize)
