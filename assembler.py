@@ -37,7 +37,7 @@ def runCorrect(arguments):
     outdir = arguments[3]
     outfile = '{0}/subsample_corrected.{1}.ec.fq'.format(outdir, ksize)
     metric = '{0}/subsample.{1}.metrics.txt'.format(outdir, ksize)
-    sga_correct = ['sga', 'correct', '-p', sga_index, '-k', ksize,
+    sga_correct = ['sga', 'correct', '-p', sga_index, '-k', str(ksize),
                     '--learn', sga_file]
     print('Running command : {0}'.format(' '.join(sga_correct)))
     run_sga_correct = subprocess.Popen(sga_correct, shell=False)
@@ -89,8 +89,9 @@ def runKan(arguments):
     ksize = arguments[3]
     outfile = '{0}/sample.{1}.kc'.format(outdir, ksize)
     kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
-    kanalyze_cmd = [kanalyze, '-k', ksize, '--minsize', '15', '-m', 'dec', '-o'
+    kanalyze_cmd = [kanalyze, '-k', str(ksize), '--minsize', '15', '-m', 'dec', '-o'
                     , outfile] + fastq
+    print('Running Kanalyze: {0}'.format(' '.join(kanalyze_cmd)))
     run_kanalyze = subprocess.Popen(kanalyze_cmd, shell=False)
     run_kanalyze = None
     return(outfile)
