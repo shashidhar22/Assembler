@@ -45,7 +45,7 @@ def sgaCorrect(fastq, outdir, krange=[35,37,39,41,43,45], size=1000000):
     sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
                         '>', sga_file]
     print('Running command : {0}'.format(' '.join(sga_pre_process)))
-    run_pre_process = subprocess.Popen(sga_pre_process, shell=False)
+    run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
     run_pre_process.wait()
     run_pre_process = None
     sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8',
@@ -60,7 +60,7 @@ def sgaCorrect(fastq, outdir, krange=[35,37,39,41,43,45], size=1000000):
     sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
                         '>', sga_file]
     print('Running command : {0}'.format(' '.join(sga_pre_process)))
-    run_pre_process = subprocess.Popen(sga_pre_process, shell=False)
+    run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
     run_pre_process.wait()
     run_pre_process = None
     pool = Pool(processes=int(len(krange)))
