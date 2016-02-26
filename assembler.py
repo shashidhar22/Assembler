@@ -26,7 +26,7 @@ def subSample(fastq, outdir, size=1000000, readlen=0):
             count += 1
         else:
             continue
-    return(outfiler1, outfiler2)
+    return(outputr1, outputr2)
 
 def runCorrect(arguments):
     sga_file = arguments[0]
