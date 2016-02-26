@@ -18,7 +18,7 @@ def subSample(fastq, outdir, size=1000000):
     outfiler1 = open(outputr1, 'w')
     outfiler2 = open(outputr2, 'w')
     print('Subsampling {0} reads from raw data'.format(size))
-    for count, read1, read2 in enumerate(zip(recs1, recs2)):
+    for count, (read1, read2) in enumerate(zip(recs1, recs2)):
         if count <= size:
             SeqIO.write(recs1, outfiler1, "fastq")
             SeqIO.write(recs2, outfiler2, "fastq")
@@ -37,23 +37,29 @@ def runCorrect(sga_file, sga_index, ksize, outdir):
     run_sga_correct = None
     return(metric)
 
-def sgaCorrect(fastq, outdir, krange=[35,37,39,41,43,45], size=1000000):
+def sgaCorrect(fastq, outdir, krange=[35,37,39,41,43,45], size=1000000, force):
     read1 = fastq[0]
     read2 = fastq[1]
     outdir  = os.path.abspath(outdir)
     sga_file = '{0}/sgaout.fastq'.format(outdir)
-    sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
-                        '>', sga_file]
-    print('Running command : {0}'.format(' '.join(sga_pre_process)))
-    run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
-    run_pre_process.wait()
-    run_pre_process = None
-    sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8',
-                sga_file]
-    print('Running command : {0}'.format(' '.join(sga_index)))
-    run_sga_index = subprocess.Popen(sga_index,  shell=False)
-    run_sga_index.wait()
-    run_sga_index = None
+    if force != True and os.path.exists(sga_file):
+        print('Skipping pre preprocess')
+    else:
+        sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
+                            '>', sga_file]
+        print('Running command : {0}'.format(' '.join(sga_pre_process)))
+        run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
+        run_pre_process.wait()
+        run_pre_process = None
+    if force != True and os.path.exists(sga_index):
+        print('Skipping index')
+    else:
+        sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8',
+                    sga_file]
+        print('Running command : {0}'.format(' '.join(sga_index)))
+        run_sga_index = subprocess.Popen(sga_index,  shell=False)
+        run_sga_index.wait()
+        run_sga_index = None
     read1, read2 = subSample(fastq, outdir)
     sga_index = '{0}/sgaout'.format(outdir)
     sga_file = '{0}/subsample.fastq'.format(outdir)
