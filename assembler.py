@@ -70,7 +70,6 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
         run_sga_index.wait()
         run_sga_index = None
     read1, read2 = subSample(fastq, outdir, size, readlen)
-    sga_index = '{0}/sgaout'.format(outdir)
     sga_file = '{0}/subsample.fastq'.format(outdir)
     sga_pre_process = ['sga', 'preprocess', '-p', '1', read1, read2,
                         '>', sga_file]
