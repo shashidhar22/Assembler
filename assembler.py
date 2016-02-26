@@ -66,6 +66,25 @@ def sgaCorrect(fastq, outdir, krange=[35,37,39,41,43,45], size=1000000):
     pool = Pool(processes=int(len(krange)))
     results = pool.map(runCorrect, zip(repeat(sga_file), repeat(sga_index),
                 krange, repeat(outdir)))
+    return
+
+def runKan(fastq, outdir, ksize):
+    outfile = '{0}/sample.{1}.kc'.format(outdir, ksize)
+    kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
+    kanalyze_cmd = [kanalyze, '-k', ksize, '--minsize', '15', '-m', 'dec', '-o'
+                    , outfile] + fastq
+    run_kanalyze = subprocess.Popen(kanalyze_cmd, shell=False)
+    run_kanalyze = None
+    return(outfile)
+
+def kmerOpt(fastq, outdir, krange=[35,45,55,65,75], size=10000000):
+    outdir = os.path.abspath(outdir)
+    read1, read2 = subSample(fastq, outdir, size)
+    kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
+    pool = Pool(processes=2)
+    results = pool.map(runKan, zip(repeat([read1, read2]), repeat(outdir), krange))
+    return
+
 
 if __name__ == '__main__':
     pbrazi =  argparse.ArgumentParser(prog='assembler')
@@ -77,6 +96,11 @@ if __name__ == '__main__':
         default=[35, 37, 39, 41, 43, 45], help='k-mer range to test correction')
     pbrazi.add_argument('-s', '--size', type=int, dest='samplesize',
         default=1000000, help='Number of reads subsampled.')
+    pbrazi.add_argument('-m', '--mode', type=int, dest='mode',
+        default='kan', choices=['sga','kan'], help='Mode of optimization')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.0')
     opts = pbrazi.parse_args()
-    metrics = sgaCorrect(opts.fastq, opts.outdir, opts.krange, opts.samplesize)
+    if opts.mode == 'sga':
+        metrics = sgaCorrect(opts.fastq, opts.outdir, opts.krange, opts.samplesize)
+    else:
+        metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize)
