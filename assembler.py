@@ -42,6 +42,7 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000):
     read2 = fastq[1]
     outdir  = os.path.abspath(outdir)
     sga_file = '{0}/sgaout.fastq'.format(outdir)
+    index_file = '{0}/sgaout.bwt'.format(outdir)
     if force != True and os.path.exists(sga_file):
         print('Skipping pre preprocess')
     else:
@@ -51,7 +52,7 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000):
         run_pre_process = subprocess.Popen(' '.join(sga_pre_process), shell=True)
         run_pre_process.wait()
         run_pre_process = None
-    if force != True and os.path.exists(sga_index):
+    if force != True and os.path.exists(index_file):
         print('Skipping index')
     else:
         sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8',
