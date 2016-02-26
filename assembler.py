@@ -88,12 +88,16 @@ def runKan(arguments):
     outdir = arguments[2]
     ksize = arguments[3]
     outfile = '{0}/sample.{1}.kc'.format(outdir, ksize)
+    tdir = '{0}/sample_{1}'.format(outdir, ksize)
+    od.mkdir(tdir)
     kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
-    kanalyze_cmd = [kanalyze, '-k', str(ksize), '--minsize', '15', '-m', 'dec', '-o'
-                    , outfile] + fastq
+    kanalyze_cmd = [kanalyze, '-k', str(ksize), '--minsize', '15', '-m', 'dec',
+                    '--temploc', tdir, '-o', outfile] + fastq
     print('Running Kanalyze: {0}'.format(' '.join(kanalyze_cmd)))
     run_kanalyze = subprocess.Popen(kanalyze_cmd, shell=False)
+    run_kanalyze.wait()
     run_kanalyze = None
+    os.rmdir(tdir)
     return(outfile)
 
 def kmerOpt(fastq, outdir, krange=[35,45,55,65,75], size=10000000, readlen=0):
