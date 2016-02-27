@@ -113,7 +113,7 @@ def kmerOpt(fastq, outdir, krange=[35,45,55,65,75], size=10000000, readlen=0):
     outdir = os.path.abspath(outdir)
     read1, read2 = subSample(fastq, outdir, size, readlen)
     kanalyze = '/project/home/sravishankar9/tools/kanalyze-1.0.0.dev2/count'
-    pool = Pool(processes=2)
+    pool = Pool(processes=1)
     results = pool.map(runKan, zip(repeat(read1), reapeat(read2), repeat(outdir), krange))
     return
 
