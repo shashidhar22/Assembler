@@ -147,8 +147,11 @@ def multiAssemble(fastq, outdir):
         os.mkdir(outdir)
     for line in read_handle:
         num_reads += 1
+    print('Total number of reads : {0}'.format(num_reads))
     size_range = [int(0.1*num_reads), int(0.25*num_reads), int(0.5*num_reads),
                 int(0.75*num_reads), int(0.90*num_reads), int(num_reads)]
+    print('Size ranges are:')
+    print(size_range)
     ksize = '27,49,71,93,115,127'
     pool = Pool(processes=2)
     subsample = pool.map(percAnalysis, zip(size_range, repeat(read1),
