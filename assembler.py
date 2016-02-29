@@ -126,7 +126,7 @@ def percAnalysis(arguments):
     outdir = arguments[3]
     ksize = arguments[4]
     outdir = '{0}/subsample{1}'.format(outdir, sam_size)
-    if !os.path.exists(outdir):
+    if !(os.path.exists(outdir)):
         os.mkdir(outdir)
     spade_path = '/projects/home/sravishankar9/tools/SPAdes-3.7.0-Linux/bin/spades.py'
     read1, read2 = subSample([read1, read2], outdir, size=sam_size)
@@ -150,7 +150,7 @@ def multiAssemble(fastq, outdir):
     size_range = [int(0.1*num_reads), int(0.25*num_reads), int(0.5*num_reads),
                 int(0.75*num_reads), int(0.90*num_reads), int(num_reads)]
     ksize = '27,49,71,93,115,127'
-    pool = Pool(processes=1)
+    pool = Pool(processes=2)
     subsample = pool.map(percAnalysis, zip(size_range, repeat(read1),
             repeat(read2), repeat(outdir), repeat(ksize)))
     return
