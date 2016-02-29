@@ -126,7 +126,7 @@ def percAnalysis(arguments):
     outdir = arguments[3]
     ksize = arguments[4]
     outdir = '{0}/subsample{1}'.format(outdir, sam_size)
-    if !(os.path.exists(outdir)):
+    if not os.path.exists(outdir):
         os.mkdir(outdir)
     spade_path = '/projects/home/sravishankar9/tools/SPAdes-3.7.0-Linux/bin/spades.py'
     read1, read2 = subSample([read1, read2], outdir, size=sam_size)
