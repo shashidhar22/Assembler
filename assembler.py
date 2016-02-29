@@ -178,7 +178,7 @@ if __name__ == '__main__':
     if opts.mode == 'sga':
         metrics = sgaCorrect(opts.fastq, opts.outdir, opts.force, opts.krange,
                             opts.samplesize, opts.readlen)
-    elif opts.modde == 'spa':
+    elif opts.mode == 'spa':
         multiAssemble(opts.fastq, opts.outdir)
     else:
         metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize,
