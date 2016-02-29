@@ -143,7 +143,7 @@ def multiAssemble(fastq, outdir):
     read2 = fastq[1]
     read_handle = SeqIO.parse(open(read1), 'fastq')
     num_reads = 0
-    if !os.path.exists(outdir):
+    if not os.path.exists(outdir):
         os.mkdir(outdir)
     for line in read_handle:
         num_reads += 1
