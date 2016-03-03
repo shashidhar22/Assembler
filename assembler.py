@@ -121,7 +121,7 @@ def sgaPipe(arguments):
     #Create output paths
     outdir = arguments[3]
     outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
-    if not os.path.exits(outdir):
+    if not os.path.exists(outdir):
         os.mkdir(outdir)
     #Define correction commands and run SGA correct
     outfile = '{0}/sgafile.ec.fastq'.format(outdir)
@@ -162,7 +162,7 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir):
     read1 = fastq[0]
     read2 = fastq[1]
     outdir = '{0}/pbrazi_{1}'.format(outdir, sample)
-    if not os.path.exits(outdir):
+    if not os.path.exists(outdir):
         os.mkdir(outdir)
     sga_path = '/projects/home/sravishankar9/tools/sga/src/SGA/sga'
     print('Output paths created')
