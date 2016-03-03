@@ -126,7 +126,7 @@ def sgaPipe(arguments):
     #Define correction commands and run SGA correct
     outfile = '{0}/sgafile.ec.fastq'.format(outdir)
     sga_correct = ['sga', 'correct', '-p', sga_index, '-k', str(correct),
-                    '--learn', sga_file, '-o', outfile]
+                    '--learn', sga_fastq, '-o', outfile]
     run_sga_correct = subprocess.Popen(sga_correct, shell=False)
     run_sga_correct.wait()
     run_sga_correct = None
@@ -158,7 +158,7 @@ def sgaPipe(arguments):
     #Return output paths
     return(assemblefile)
 
-def runSGA(fastq, correct, overlap, assemble, sample, outdir):
+def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False):
     read1 = fastq[0]
     read2 = fastq[1]
     outdir = os.path.abspath(outdir)
@@ -166,11 +166,19 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir):
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     sga_path = '/projects/home/sravishankar9/tools/sga/src/SGA/sga'
-    print('Output paths created')
-    sga_fastq = sgaPreProcess(read1, read2, outdir)
-    print('Preprocessing complete')
-    sga_index = sgaIndex(sga_fastq, outdir)
-    print('Indexing complete')
+    if force != True and os.path.exists('{0}/sgafile.fastq'.format(outdir)):
+        print('Skipping Preprocessing')
+        sga_fastq = '{0}/sgafile.fastq'.format(outdir)
+    else:
+        print('Output paths created')
+        sga_fastq = sgaPreProcess(read1, read2, outdir)
+        print('Preprocessing complete')
+    if force != True and os.path.exists('{0}/sgafile.bwt'.format(outdir)):
+        print('Skipping Indexing')
+        sga_index = '{0}/sgafile'.format(outdir)
+    else:
+        sga_index = sgaIndex(sga_fastq, outdir)
+        print('Indexing complete')
     kmer_perms = list(itertools.product(correct, overlap, assemble))
     print('Starting crazy sga analysis with kmer combinations: ')
     print(kmer_perms)
@@ -284,7 +292,7 @@ if __name__ == '__main__':
         multiAssemble(opts.fastq, opts.outdir)
     elif opts.mode == 'cra':
         runSGA(opts.fastq, opts.correct, opts.overlap, opts.assemble,
-                opts.sample, opts.outdir)
+                opts.sample, opts.outdir,opts.force)
     else:
         metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize,
                         opts.readlen)
