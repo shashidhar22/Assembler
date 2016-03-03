@@ -120,6 +120,7 @@ def sgaPipe(arguments):
     correct, overlap, assemble = arguments[2]
     #Create output paths
     outdir = arguments[3]
+    cleanup = arguments[4]
     outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -155,10 +156,16 @@ def sgaPipe(arguments):
     run_sga_assemble.wait()
     run_sga_assemble = None
     assemblefile = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
+    for files in glob.glob('{0}/*'.format(outdir)):
+        cont = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
+        var = '{0}/pbrazi_{1}_{2}_{3}-variants.fa'.format(outdir, correct, overlap, assemble)
+        graph = '{0}/pbrazi_{1}_{2}_{3}-graph.asqg.gz'.format(outdir, correct, overlap, assemble)
+        if files not in [cont, var, graph] and cleanup:
+            os.remove(files)
     #Return output paths
     return(assemblefile)
 
-def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False):
+def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False, cleanup=False):
     read1 = fastq[0]
     read2 = fastq[1]
     outdir = os.path.abspath(outdir)
@@ -185,7 +192,7 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False):
     pool = Pool(processes=2)
     print('This may take a while; Time for some coffee')
     assemblies = pool.map(sgaPipe, zip(repeat(sga_fastq), repeat(sga_index),
-                kmer_perms, repeat(outdir)))
+                kmer_perms, repeat(outdir), repeat(cleanup)))
     print('Phew! Assemblies finally complete')
     quast_path = '/projects/home/sravishankar9/tools/quast-3.0/quast.py'
     quast_out = '{0}/quast_results'.format(outdir)
@@ -283,6 +290,7 @@ if __name__ == '__main__':
     pbrazi.add_argument('-p', '--sample', type=str, dest='sample',
         help='Sample name')
     pbrazi.add_argument('--force', action='store_true', help='Force overwrite of results.')
+    pbrazi.add_argument('--cleanup', action='store_true', help='Delete unwanted files.')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.0')
     opts = pbrazi.parse_args()
     if opts.mode == 'sga':
@@ -292,7 +300,7 @@ if __name__ == '__main__':
         multiAssemble(opts.fastq, opts.outdir)
     elif opts.mode == 'cra':
         runSGA(opts.fastq, opts.correct, opts.overlap, opts.assemble,
-                opts.sample, opts.outdir,opts.force)
+                opts.sample, opts.outdir, opts.force, opts.cleanup)
     else:
         metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize,
                         opts.readlen)
