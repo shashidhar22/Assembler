@@ -2,6 +2,7 @@ import os
 import sys
 import Bio
 import argparse
+import itertools
 import subprocess
 from Bio import SeqIO
 from itertools import repeat
@@ -96,6 +97,96 @@ def sgaCorrect(fastq, outdir, force, krange=[35,37,39,41,43,45], size=1000000, r
                 krange, repeat(outdir)))
     return
 
+def sgaPreProcess(read1, read2, outdir, sga_path='sga'):
+    outfile = '{0}/sgafile.fastq'.format(outdir)
+    sga_cmd = [sga_path, 'preprocess', '-p', '1', read1, read2, '>', outfile]
+    run_pre_process = subprocess.Popen(' '.join(sga_cmd), shell=True)
+    run_pre_process.wait()
+    run_pre_process = None
+    return(outfile)
+
+def sgaIndex(sga_file, outdir):
+    index_file = '{0}/sgafile'.format(outdir)
+    sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8', '-p', index_file,
+                sga_file]
+    run_sga_index = subprocess.Popen(sga_index, shell=False)
+    run_sga_index.wait()
+    run_sga_index = None
+    return(index_file)
+
+def sgaPipe(arguments):
+    sga_fastq = arguments[0]
+    sga_index = arguments[1]
+    correct, overlap, assemble = arguments[2]
+    #Create output paths
+    outdir = arguments[3]
+    outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
+    if !os.path.exits(outdir):
+        os.mkdir(outdir)
+    #Define correction commands and run SGA correct
+    outfile = '{0}/sgafile.ec.fastq'.format(outdir)
+    sga_correct = ['sga', 'correct', '-p', sga_index, '-k', str(correct),
+                    '--learn', sga_file, '-o', outfile]
+    run_sga_correct = subprocess.Popen(sga_correct, shell=False)
+    run_sga_correct.wait()
+    run_sga_correct = None
+    #Define corrected index command, and run SGA index
+    sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8', outfile]
+    run_sga_index = subprocess.Popen(sga_index, shell=False)
+    run_sga_index.wait()
+    run_sga_index = None
+    #Define filter command and run SGA filter
+    filterfile = '{0}/sgafile.ec.filter.pass.fa'.format(outdir)
+    sga_filter = ['sga','filter', '-x', '3', '-t', '8', outfile]
+    run_sga_filter = subprocess.Popen(sga_filter, shell=False)
+    run_sga_filter.wait()
+    run_sga_filter = None
+    #Define overlap command and run SGA overlap
+    overlapfile = '{0}/sgafile.ec.filter.pass.asqg.gz'.format(outdir)
+    sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '8', filterfile]
+    run_sga_overlap = subprocess.Popen(sga_overlap, shell=False)
+    run_sga_overlap.wait()
+    run_sga_overlap = None
+    #Define assemble command and run SGA assemble
+    assemblefile = '{0}/pbrazi_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
+    sga assemble -m 111 --min-branch-length 400 -o /projects/home/sravishankar9/projects/Malaria/Assemblies/SGA/pbrazi_miseq2/pbrazi_primary /projects/home/sravishankar9/projects/Malaria/Assemblies/SGA/pbrazi_miseq2/pbrazi.correct.filter.pass.asqg.gz
+    sga_assemble = ['sga', 'assemble', '-m', str(assemble), '-o', assemblefile,
+                    overlapfile]
+    run_sga_assemble = subprocess.Popen(sga_assemble, shell=False)
+    run_sga_assemble.wait()
+    run_sga_assemble = None
+    assemblefile = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
+    #Return output paths
+    return(assemblefile)
+
+def runSGA(fastq, correct, overlap, assemble, sample, outdir):
+    read1 = fastq[0]
+    read2 = fastq[1]
+    outdir = '{0}/pbrazi_{1}'.format(outdir, sample)
+    if !os.path.exits(outdir):
+        os.mkdir(outdir)
+    sga_path = '/projects/home/sravishankar9/tools/sga/src/SGA/sga'
+    print('Output paths created')
+    sga_fastq = sgaPreProcess(read1, read2, outdir)
+    print('Preprocessing complete')
+    sga_index = sgaIndex(sga_fastq, outdir)
+    print('Indexing complete')
+    kmer_perms = list(itertools.product(correct, overlap, assemble))
+    print('Starting crazy sga analysis with kmer combinations: ')
+    print(kmer_perms)
+    pool = Pool(processes=2)
+    print('This may take a while; Time for some coffee')
+    assemblies = pool.map(sgaPipe, zip(repeat(sga_fastq), repeat(sga_index),
+                kmer_perms, repeat(outdir)))
+    print('Phew! Assemblies finally complete')
+    quast_path = '/projects/home/sravishankar9/tools/quast-3.0/quast.py'
+    quast_out = '{0}/quast_results'.format(outdir)
+    quast_cmd = ['python', quast_path, '-o', quast_out] + assemblies
+    print('Time for quast')
+    run_quast = subprocess.Popen(quast_cmd, shell=False)
+    run_quast.wait()
+    return
+
 def runKan(arguments):
     fastq = [arguments[0], arguments[1]]
     outdir = arguments[2]
@@ -174,7 +265,15 @@ if __name__ == '__main__':
     pbrazi.add_argument('-l', '--readlen', type=int, dest='readlen',
         default=0, help='Minimum read length for each read pair.')
     pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
-        default='kan', choices=['sga','kan','spa'], help='Mode of optimization.')
+        default='kan', choices=['sga','kan','spa','cra'], help='Mode of optimization.')
+    pbrazi.add_argument('-c', '--correct', type=int, dest='correct',
+        nargs='+', help='SGA correct k-mer choices')
+    pbrazi.add_argument('-e', '--overlap', type=int, dest='overlap',
+        nargs='+', help='SGA overlap k-mer choices')
+    pbrazi.add_argument('-a', '--assemble', type=int, dest='assemble',
+        nargs='+', help='SGA assemble k-mer choices')
+    pbrazi.add_argument('-p', '--sample', type=str, dest='sample',
+        help='Sample name')
     pbrazi.add_argument('--force', action='store_true', help='Force overwrite of results.')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.0')
     opts = pbrazi.parse_args()
@@ -183,6 +282,9 @@ if __name__ == '__main__':
                             opts.samplesize, opts.readlen)
     elif opts.mode == 'spa':
         multiAssemble(opts.fastq, opts.outdir)
+    elif opts.mode == 'cra':
+        runSGA(opts.fastq, opts.correct, opts.overlap, opts.assemble,
+                opts.sample, opts.outdir)
     else:
         metrics = kmerOpt(opts.fastq, opts.outdir, opts.krange, opts.samplesize,
                         opts.readlen)
