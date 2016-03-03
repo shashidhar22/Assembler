@@ -161,6 +161,7 @@ def sgaPipe(arguments):
 def runSGA(fastq, correct, overlap, assemble, sample, outdir):
     read1 = fastq[0]
     read2 = fastq[1]
+    outdir = os.path.abspath(outdir)
     outdir = '{0}/pbrazi_{1}'.format(outdir, sample)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
