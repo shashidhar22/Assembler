@@ -149,7 +149,6 @@ def sgaPipe(arguments):
     run_sga_overlap = None
     #Define assemble command and run SGA assemble
     assemblefile = '{0}/pbrazi_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
-    sga assemble -m 111 --min-branch-length 400 -o /projects/home/sravishankar9/projects/Malaria/Assemblies/SGA/pbrazi_miseq2/pbrazi_primary /projects/home/sravishankar9/projects/Malaria/Assemblies/SGA/pbrazi_miseq2/pbrazi.correct.filter.pass.asqg.gz
     sga_assemble = ['sga', 'assemble', '-m', str(assemble), '-o', assemblefile,
                     overlapfile]
     run_sga_assemble = subprocess.Popen(sga_assemble, shell=False)
