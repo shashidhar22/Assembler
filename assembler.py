@@ -121,6 +121,7 @@ def sgaPipe(arguments):
     #Create output paths
     outdir = arguments[3]
     cleanup = arguments[4]
+    force = arguments[5]
     outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -205,7 +206,7 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False, clean
     pool = Pool(processes=2)
     print('This may take a while; Time for some coffee')
     assemblies = pool.map(sgaPipe, zip(repeat(sga_fastq), repeat(sga_index),
-                kmer_perms, repeat(outdir), repeat(cleanup)))
+                kmer_perms, repeat(outdir), repeat(cleanup), repeat(force)))
     print('Phew! Assemblies finally complete')
     quast_path = '/projects/home/sravishankar9/tools/quast-3.0/quast.py'
     quast_out = '{0}/quast_results'.format(outdir)
