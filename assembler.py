@@ -1,6 +1,7 @@
 import os
 import sys
 import Bio
+import glob
 import argparse
 import itertools
 import subprocess
