@@ -137,7 +137,9 @@ def sgaPipe(arguments):
         run_sga_correct.wait()
         run_sga_correct = None
     #Define corrected index command, and run SGA index
-    sga_index = ['sga', 'index', '-a', 'ropebwt', '-t', '8', outfile]
+    index_file = '{0}/sgafile.ec'.format(outdir)
+    sga_index = ['sga', 'index', '-a', 'ropebwt', '-p', index_file,
+                '-t', '8', outfile]
     if os.path.exists('{0}/sgafile.ec.bwt'.format(outdir)) and force !=True:
         print('Skipping indexing')
     else:
@@ -146,7 +148,8 @@ def sgaPipe(arguments):
         run_sga_index = None
     #Define filter command and run SGA filter
     filterfile = '{0}/sgafile.ec.filter.pass.fa'.format(outdir)
-    sga_filter = ['sga','filter', '-x', '3', '-t', '8', outfile]
+    sga_filter = ['sga','filter', '-x', '3', '-t', '8', '-o', filterfile,
+                outfile]
     if os.path.exists(filterfile) and force != True:
         print('Skipping filtering')
     else:
@@ -154,8 +157,9 @@ def sgaPipe(arguments):
         run_sga_filter.wait()
         run_sga_filter = None
     #Define overlap command and run SGA overlap
-    overlapfile = '{0}/sgafile.ec.filter.pass.asqg.gz'.format(outdir)
-    sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '8', filterfile]
+    overlapfile = '{0}/sgafile.ec.filter.pass'.format(outdir)
+    sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '8', '-p',
+                overlapfile, filterfile]
     if os.path.exists(overlapfile) and force != True:
         print('Skipping overlap')
     else:
