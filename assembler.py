@@ -175,13 +175,13 @@ def sgaPipe(arguments):
     run_sga_assemble.wait()
     run_sga_assemble = None
     assemblefile = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
-    #for files in glob.glob('{0}/*'.format(outdir)):
-    #    cont = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
-    #    var = '{0}/pbrazi_{1}_{2}_{3}-variants.fa'.format(outdir, correct, overlap, assemble)
-    #    graph = '{0}/pbrazi_{1}_{2}_{3}-graph.asqg.gz'.format(outdir, correct, overlap, assemble)
-    #    if files not in [cont, var, graph] and cleanup:
-    #        print(files)
-    #        os.remove(files)
+    for files in glob.glob('{0}/*'.format(outdir)):
+        cont = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
+        var = '{0}/pbrazi_{1}_{2}_{3}-variants.fa'.format(outdir, correct, overlap, assemble)
+        graph = '{0}/pbrazi_{1}_{2}_{3}-graph.asqg.gz'.format(outdir, correct, overlap, assemble)
+        if files not in [cont, var, graph] and cleanup:
+            print(files)
+            os.remove(files)
     #Return output paths
     return(assemblefile)
 
