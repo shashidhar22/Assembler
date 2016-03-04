@@ -132,7 +132,7 @@ def sgaPipe(arguments):
     if os.path.exists(outfile) and force != True:
         print('Skipping correction')
     else:
-        run_sga_correct = subprocess.Popen(sga_correct, stdout=subprocess.PIPE, shell=False)
+        run_sga_correct = subprocess.Popen(sga_correct, shell=False)
         run_sga_correct.wait()
         run_sga_correct = None
     #Define corrected index command, and run SGA index
@@ -140,7 +140,7 @@ def sgaPipe(arguments):
     if os.path.exists('{0}/sgafile.ec.bwt'.format(outdir)) and force !=True:
         print('Skipping indexing')
     else:
-        run_sga_index = subprocess.Popen(sga_index, stdout=subprocess.PIPE, shell=False)
+        run_sga_index = subprocess.Popen(sga_index, shell=False)
         run_sga_index.wait()
         run_sga_index = None
     #Define filter command and run SGA filter
@@ -149,7 +149,7 @@ def sgaPipe(arguments):
     if os.path.exists(filterfile) and force != True:
         print('Skipping filtering')
     else:
-        run_sga_filter = subprocess.Popen(sga_filter, stdout=subprocess.PIPE, shell=False)
+        run_sga_filter = subprocess.Popen(sga_filter, shell=False)
         run_sga_filter.wait()
         run_sga_filter = None
     #Define overlap command and run SGA overlap
@@ -158,14 +158,14 @@ def sgaPipe(arguments):
     if os.path.exists(overlapfile) and force != True:
         print('Skipping overlap')
     else:
-        run_sga_overlap = subprocess.Popen(sga_overlap, stdout=subprocess.PIPE, shell=False)
+        run_sga_overlap = subprocess.Popen(sga_overlap, shell=False)
         run_sga_overlap.wait()
         run_sga_overlap = None
     #Define assemble command and run SGA assemble
     assemblefile = '{0}/pbrazi_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
     sga_assemble = ['sga', 'assemble', '-m', str(assemble), '-o', assemblefile,
                     overlapfile]
-    run_sga_assemble = subprocess.Popen(sga_assemble, stdout=subprocess.PIPE, shell=False)
+    run_sga_assemble = subprocess.Popen(sga_assemble, shell=False)
     run_sga_assemble.wait()
     run_sga_assemble = None
     assemblefile = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
