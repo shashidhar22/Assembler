@@ -167,7 +167,6 @@ def sgaPipe(arguments):
         run_sga_overlap.wait()
         run_sga_overlap = None
     #Define assemble command and run SGA assemble
-    overlapfile = '{0}.fa'.format(overlapfile)
     assemblefile = '{0}/pbrazi_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
     sga_assemble = ['sga', 'assemble', '-m', str(assemble), '-o', assemblefile,
                     overlapfile]
