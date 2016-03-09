@@ -174,7 +174,7 @@ def sgaPipe(arguments):
         run_sga_overlap.wait()
         run_sga_overlap = None
     #Define assemble command and run SGA assemble
-    assemblefile = '{0}/pbrazi_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
+    assemblefile = '{0}/pbrazi_{1}_{2}_{3}'.format(outdir, base, overlap, assemble)
     sga_assemble = ['sga', 'assemble', '-m', str(assemble), '-o', assemblefile,
                     overlapfile]
     run_sga_assemble = subprocess.Popen(sga_assemble, shell=False)
