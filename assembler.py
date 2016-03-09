@@ -180,7 +180,7 @@ def sgaPipe(arguments):
     run_sga_assemble = subprocess.Popen(sga_assemble, shell=False)
     run_sga_assemble.wait()
     run_sga_assemble = None
-    assemblefile = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
+    assemblefile = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, base, overlap, assemble)
     #Return output paths
     return(assemblefile)
 
