@@ -211,6 +211,7 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False, clean
     filterfiles = pool.map(sgaFilter, zip(repeat(sga_fastq), repeat(sga_index),
                 correct, repeat(outdir), repeat(force)))
     kmer_perms = list(itertools.product(filterfiles, overlap, assemble))
+    print(kmer_perms)
     print('Phew! That took forever! Now we just need to overlap and assemble')
     pool = Pool(processes=5)
     assemblies = pool.map(sgaPipe, zip(kmer_perms, repeat(outdir),
