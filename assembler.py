@@ -161,7 +161,9 @@ def sgaPipe(arguments):
     #Create output paths
     outdir = arguments[1]
     force = arguments[2]
-    outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
+    base = os.path.splitext(os.path.basename(os.path.dirname(filterfile)))[0]
+    base = base.split('_')[-1]
+    outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, base, overlap, assemble)
     overlapfile = '{0}/sgafile.ec.filter.pass.asqg.gz'.format(outdir)
     sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '8', '-o',
                 overlapfile, filterfile]
