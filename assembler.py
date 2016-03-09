@@ -120,7 +120,7 @@ def sgaFilter(arguments):
     sga_index = arguments[1]
     correct = arguments[2]
     outdir = arguments[3]
-    force = arguments[5]
+    force = arguments[4]
     outdir = '{0}/sga_correct_{1}'.format(outdir,correct)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
