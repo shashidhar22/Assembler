@@ -115,15 +115,13 @@ def sgaIndex(sga_file, outdir):
     run_sga_index = None
     return(index_file)
 
-def sgaPipe(arguments):
+def sgaFilter(arguments):
     sga_fastq = arguments[0]
     sga_index = arguments[1]
-    correct, overlap, assemble = arguments[2]
-    #Create output paths
+    correct = arguments[2]
     outdir = arguments[3]
-    cleanup = arguments[4]
     force = arguments[5]
-    outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
+    outdir = '{0}/sga_correct_{1}'.format(outdir,correct)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     #Define correction commands and run SGA correct
@@ -156,7 +154,14 @@ def sgaPipe(arguments):
         run_sga_filter = subprocess.Popen(sga_filter, shell=False)
         run_sga_filter.wait()
         run_sga_filter = None
-    #Define overlap command and run SGA overlap
+    return(filterfile)
+
+def sgaPipe(arguments):
+    filterfile, overlap, assemble = arguments[0]
+    #Create output paths
+    outdir = arguments[1]
+    force = arguments[2]
+    outdir = '{0}/sga_{1}_{2}_{3}'.format(outdir, correct, overlap, assemble)
     overlapfile = '{0}/sgafile.ec.filter.pass.asqg.gz'.format(outdir)
     sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '8', '-o',
                 overlapfile, filterfile]
@@ -174,13 +179,6 @@ def sgaPipe(arguments):
     run_sga_assemble.wait()
     run_sga_assemble = None
     assemblefile = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
-    for files in glob.glob('{0}/*'.format(outdir)):
-        cont = '{0}/pbrazi_{1}_{2}_{3}-contigs.fa'.format(outdir, correct, overlap, assemble)
-        var = '{0}/pbrazi_{1}_{2}_{3}-variants.fa'.format(outdir, correct, overlap, assemble)
-        graph = '{0}/pbrazi_{1}_{2}_{3}-graph.asqg.gz'.format(outdir, correct, overlap, assemble)
-        if files not in [cont, var, graph] and cleanup:
-            print(files)
-            os.remove(files)
     #Return output paths
     return(assemblefile)
 
@@ -205,13 +203,16 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False, clean
     else:
         sga_index = sgaIndex(sga_fastq, outdir)
         print('Indexing complete')
-    kmer_perms = list(itertools.product(correct, overlap, assemble))
-    print('Starting crazy sga analysis with kmer combinations: ')
-    print(kmer_perms)
-    pool = Pool(processes=2)
-    print('This may take a while; Time for some coffee')
-    assemblies = pool.map(sgaPipe, zip(repeat(sga_fastq), repeat(sga_index),
-                kmer_perms, repeat(outdir), repeat(cleanup), repeat(force)))
+    print('Starting crazy sga correction steps; This might take a while!')
+    print('Why don\'t you go get some coffee')
+    pool = Pool(processes=5)
+    filterfiles = pool.map(sgaFilter, zip(repeat(sga_fastq), repeat(sga_index),
+                correct, repeat(outdir), repeat(force)))
+    kmer_perms = list(itertools.product(filterfiles, overlap, assemble))
+    print('Phew! That took forever! Now we just need to overlap and assemble')
+    pool = Pool(processes=5)
+    assemblies = pool.map(sgaPipe, zip(kmer_perms, repeat(outdir),
+                repeat(cleanup), repeat(force)))
     print('Phew! Assemblies finally complete')
     quast_path = '/projects/home/sravishankar9/tools/quast-3.0/quast.py'
     quast_out = '{0}/quast_results'.format(outdir)
