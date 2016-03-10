@@ -167,7 +167,7 @@ def sgaPipe(arguments):
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     overlapfile = '{0}/sgafile.ec.filter.pass.asqg.gz'.format(outdir)
-    sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '1', '-o',
+    sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '8', '-o',
                 overlapfile, filterfile]
     if os.path.exists(overlapfile) and force != True:
         print('Skipping overlap')
@@ -218,7 +218,7 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False, clean
     kmer_perms = list(itertools.product(filterfiles, overlap, assemble))
     print(kmer_perms)
     print('Phew! That took forever! Now we just need to overlap and assemble')
-    pool = Pool(processes=5)
+    pool = Pool(processes=1)
     assemblies = pool.map(sgaPipe, zip(kmer_perms, repeat(outdir),
                 repeat(cleanup), repeat(force)))
     print('Phew! Assemblies finally complete')
