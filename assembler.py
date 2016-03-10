@@ -159,7 +159,7 @@ def sgaFilter(arguments):
 def sgaPipe(arguments):
     filterfile, overlap, assemble = arguments[0]
     #Create output paths
-    outdir = arguments[1]
+    outdir = os.path.abspath(arguments[1])
     force = arguments[2]
     base = os.path.splitext(os.path.basename(os.path.dirname(filterfile)))[0]
     base = base.split('_')[-1]
@@ -210,8 +210,11 @@ def runSGA(fastq, correct, overlap, assemble, sample, outdir, force=False, clean
     print('Starting crazy sga correction steps; This might take a while!')
     print('Why don\'t you go get some coffee')
     pool = Pool(processes=5)
-    filterfiles = pool.map(sgaFilter, zip(repeat(sga_fastq), repeat(sga_index),
-                correct, repeat(outdir), repeat(force)))
+    if force == False and os.path.exists('{0}/sga_correct_{1}'.format(outdir, correct[0])):
+        filterfiles = glob.glob('{0}/sga_correct_*/sgafile.ec.filter.pass.fa'.format(outdir))
+    else:
+        filterfiles = pool.map(sgaFilter, zip(repeat(sga_fastq), repeat(sga_index),
+                    correct, repeat(outdir), repeat(force)))
     kmer_perms = list(itertools.product(filterfiles, overlap, assemble))
     print(kmer_perms)
     print('Phew! That took forever! Now we just need to overlap and assemble')
