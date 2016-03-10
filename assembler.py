@@ -167,7 +167,7 @@ def sgaPipe(arguments):
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     overlapfile = '{0}/sgafile.ec.filter.pass.asqg.gz'.format(outdir)
-    sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '8', '-o',
+    sga_overlap = ['sga', 'overlap', '-m', str(overlap), '-t', '1', '-o',
                 overlapfile, filterfile]
     if os.path.exists(overlapfile) and force != True:
         print('Skipping overlap')
