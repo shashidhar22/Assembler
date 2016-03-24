@@ -6,6 +6,7 @@ import argparse
 import itertools
 import subprocess
 import numpy as np
+import pandas as pd
 from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
@@ -27,17 +28,17 @@ def FastaParser(fasta):
 
 def ScafoldCounter(assemblies, assemblers):
     metric_matrix = list()
-    metric_rownames = assemblers
-    metric_colnames = list()
+    metric_colnames = assemblers
+    metric_rownames = np.linspace(0, 230000, 1000)
     contig_dict = dict()
     for assembly, assembler in zip(assemblies, assemblers):
         contig_list = list()
         for contigs in FastaParser(assembly):
             contig_list.append(contigs.length)
-        bins = np.linspace(0, 230000, 1000)
-        contig_dict[assembler] = np.histogram(contig_list, bins)
-    print(contig_dict)
-    return(contig_dict)
+        contig_dict[assembler] = np.histogram(contig_list, metric_rownames)
+    contig_table = pd.DataFrame(contig_dict, index=metric_rownames)
+    print(contig_table)
+    return(contig_table)
 
 if __name__ == '__main__':
     troch =  argparse.ArgumentParser(prog='Hummingbird')
