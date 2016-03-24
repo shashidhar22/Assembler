@@ -30,7 +30,7 @@ def FastaParser(fasta):
 
 def ScafoldMetric(assemblies, assemblers, gsize):
     outfile = open('AssemblyMetrics.csv','w')
-    outfile.write('Assembler\tScaffoldLength\tNG(%)\n')
+    outfile.write('Assembler\tScaffoldLength\tNG\n')
     for assembly, assembler in zip(assemblies, assemblers):
         tlen = 0
         for contigs in sorted(FastaParser(assembly), key=attrgetter('length'), reverse=True):
