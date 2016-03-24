@@ -36,7 +36,7 @@ def ScafoldCounter(assemblies, assemblers):
         contig_list = list()
         for contigs in FastaParser(assembly):
             contig_list.append(contigs.length)
-        contig_dict[assembler] = np.histogram(contig_list, metric_rownames)
+        contig_dict[assembler] = list(np.histogram(contig_list, metric_rownames)[0])
     contig_table = pd.DataFrame(contig_dict, index=metric_rownames)
     print(contig_table)
     return(contig_table)
