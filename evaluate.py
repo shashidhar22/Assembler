@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 from collections import namedtuple
+from operator import attrgetter
 from itertools import repeat
 from multiprocessing import Pool
 
@@ -27,6 +28,17 @@ def FastaParser(fasta):
         transcriptid += 1
         yield record
 
+def ScafoldMetric(assemblies, assemblers, gsize):
+    outfile = open('AssemblyMetrics.csv','w')
+    outfile.write('Assembler\tScaffoldLength\tNG(%)\n')
+    for assembly, assembler in zip(assemblies, assemblers):
+        tlen = 0
+        for contigs in FastaParser(assembly):
+            tlen += contigs.length
+            ngval = (tlen * 100)/float(gsize)
+            outfile.write('{0}\t{1}\t{2:.2f}\n'.format(assembler, contigs.length, ngval))
+    outfile.close()
+    return
 def ScafoldCounter(assemblies, assemblers, bsize):
     metric_matrix = list()
     metric_colnames = assemblers
@@ -47,6 +59,8 @@ if __name__ == '__main__':
     troch.add_argument('-a', '--assemblers', type=str, dest='assemblers', nargs='+',
         help='Assembler name list')
     troch.add_argument('-b', '--bsize', type=int, dest='bsize', help='Number of bins to create')
+    troch.add_argument('-g', '--gsize', type=int, dest='bsize', help='Estimated genome size')
     opts = troch.parse_args()
-    contig_table = ScafoldCounter(opts.assemblies, opts.assemblers, opts.bsize)
-    contig_table.to_csv('AssemblyStats.csv',header=True, sep=',')
+    #contig_table = ScafoldCounter(opts.assemblies, opts.assemblers, opts.bsize)
+    #contig_table.to_csv('AssemblyStats.csv',header=True, sep=',')
+    ScafoldMetric(opts.assemblies, opts.assemblers, opts.gsize)
