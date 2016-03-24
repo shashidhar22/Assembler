@@ -8,6 +8,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 from Bio import SeqIO
+from collections import namedtuple
 from itertools import repeat
 from multiprocessing import Pool
 
