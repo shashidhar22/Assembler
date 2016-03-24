@@ -38,7 +38,6 @@ def ScafoldCounter(assemblies, assemblers):
             contig_list.append(contigs.length)
         contig_dict[assembler] = list(np.histogram(contig_list, metric_rownames)[0]) + [0]
     contig_table = pd.DataFrame(contig_dict, index=metric_rownames)
-    print(contig_table)
     return(contig_table)
 
 if __name__ == '__main__':
@@ -48,4 +47,5 @@ if __name__ == '__main__':
     troch.add_argument('-a', '--assemblers', type=str, dest='assemblers', nargs='+',
         help='Assembler name list')
     opts = troch.parse_args()
-    contig_dict = ScafoldCounter(opts.assemblies, opts.assemblers)
+    contig_table = ScafoldCounter(opts.assemblies, opts.assemblers)
+    contig_table.to_csv('AssemblyStats.csv',header=True, sep=',')
