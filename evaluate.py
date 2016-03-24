@@ -34,9 +34,10 @@ def ScafoldMetric(assemblies, assemblers, gsize):
     for assembly, assembler in zip(assemblies, assemblers):
         tlen = 0
         for contigs in sorted(FastaParser(assembly), key=attrgetter('length'), reverse=True):
-            tlen += contigs.length
-            ngval = (tlen * 100)/float(gsize)
-            outfile.write('{0}\t{1}\t{2:.2f}\n'.format(assembler, contigs.length, ngval))
+            if contigs.length >= 1000:
+                tlen += contigs.length
+                ngval = (tlen * 100)/float(gsize)
+                outfile.write('{0}\t{1}\t{2:.2f}\n'.format(assembler, contigs.length, ngval))
     outfile.close()
     return
 def ScafoldCounter(assemblies, assemblers, bsize):
