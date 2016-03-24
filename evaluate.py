@@ -59,7 +59,7 @@ if __name__ == '__main__':
     troch.add_argument('-a', '--assemblers', type=str, dest='assemblers', nargs='+',
         help='Assembler name list')
     troch.add_argument('-b', '--bsize', type=int, dest='bsize', help='Number of bins to create')
-    troch.add_argument('-g', '--gsize', type=int, dest='bsize', help='Estimated genome size')
+    troch.add_argument('-g', '--gsize', type=int, dest='gsize', help='Estimated genome size')
     opts = troch.parse_args()
     #contig_table = ScafoldCounter(opts.assemblies, opts.assemblers, opts.bsize)
     #contig_table.to_csv('AssemblyStats.csv',header=True, sep=',')
