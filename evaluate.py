@@ -27,10 +27,10 @@ def FastaParser(fasta):
         transcriptid += 1
         yield record
 
-def ScafoldCounter(assemblies, assemblers):
+def ScafoldCounter(assemblies, assemblers, bsize):
     metric_matrix = list()
     metric_colnames = assemblers
-    metric_rownames = np.linspace(0, 230000, 1000)
+    metric_rownames = np.linspace(0, 230000, bsize)
     contig_dict = dict()
     for assembly, assembler in zip(assemblies, assemblers):
         contig_list = list()
@@ -46,6 +46,7 @@ if __name__ == '__main__':
         help='Assembly file list')
     troch.add_argument('-a', '--assemblers', type=str, dest='assemblers', nargs='+',
         help='Assembler name list')
+    troch.add_argument('-b', '--bsize', type=int, dest='bsize', help='Number of bins to create')
     opts = troch.parse_args()
-    contig_table = ScafoldCounter(opts.assemblies, opts.assemblers)
+    contig_table = ScafoldCounter(opts.assemblies, opts.assemblers, opts.bsize)
     contig_table.to_csv('AssemblyStats.csv',header=True, sep=',')
