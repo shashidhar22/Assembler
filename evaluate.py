@@ -33,7 +33,7 @@ def ScafoldMetric(assemblies, assemblers, gsize):
     outfile.write('Assembler\tScaffoldLength\tNG(%)\n')
     for assembly, assembler in zip(assemblies, assemblers):
         tlen = 0
-        for contigs in FastaParser(assembly):
+        for contigs in sorted(FastaParser(assembly), key=attrgetter('length'), reverse=True):
             tlen += contigs.length
             ngval = (tlen * 100)/float(gsize)
             outfile.write('{0}\t{1}\t{2:.2f}\n'.format(assembler, contigs.length, ngval))
