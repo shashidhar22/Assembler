@@ -1,13 +1,111 @@
 import os
+import re
+import csv
 import sys
 import Bio
 import glob
+import time
+import logging
 import argparse
 import itertools
 import subprocess
+import configparser
+import collections
 from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
+from collections import defaultdict
+
+class Assemble:
+    def __init__(self, read1, read2, outdir=os.path.abspath(os.getcwd), name='sample'):
+        self.read1 = os.path.abspath(read1)
+        self.read2 = os.path.abspath(read2)
+        self.outdir = os.path.abspath(outdir)
+        self.name=name
+
+    def abyss(self, kmer=63, abyss_path='abyss-pe'):
+        #Create ABySS folders
+        outdir = '{0}/abyss'.format(self.outdir)
+        #Log file path
+        outlog = open('{0}/abyss.log'.format(outdir), 'w')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        #Prepare abyss run command
+        outpath = 'name={0}/{1}'.format(outdir, self.name)
+        inpath = 'in=\'{0} {1}\''.format(self.read1, self.read2)
+        kparam = 'k={0}'.format(kmer)
+        cmd = [abyss_path, outpath, kparam, inpath]
+        run_prog = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
+        #Capture stdout and stderr
+        run_status = run_prog.communicate()
+        outlog.write('{0}\n'.format(run_status[0]))
+        outlog.write('{0}\n'.format(run_status[1]))
+        outlog.close()
+        return('{0}-contigs.fa'.format(outpath), run_status.returncode)
+
+    def ngopt(self, ngopt_path='a5_pipeline.pl'):
+        #Create NGOPT folders
+        outdir = '{0}/ngopt'.format(self.outdir)
+        outlog = open('{0}/ngopt.log'.format(outdir), 'w')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        #Prepare run commands
+        outpath = '{0}/{1}'.format(outdir, self.name)
+        cmd = [ngopt_path, self.read1, self.read2, outpath]
+        run_prog = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
+        #Capture stdout and stderr
+        run_status = run_prog.communicate()
+        outlog.write('{0}\n'.format(run_status[0]))
+        outlog.write('{1}\n'.format(run_status[1]))
+        outlog.close()
+        return('{0}.contigs.fasta'.format(outpath), run_status.returncode)
+
+    def sga(self, correct=41, overlap=75, assemble=71, threads=8, sga_path='sga'):
+        #Rewrite SGA, break into parts to better allow pipelining
+        #Create sga output directories
+        outdir = '{0}/sga'.format(self.outdir)
+        outlog = open('{0}/sga.log'.format(outdir), 'w')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        #Prepare preprocess commands
+        ppoutpath = '{0}/{1}.fastq'.format(outdir, self.name)
+        ppcmd = [sga_path, 'preprocess', '-p', '1', self.read1, self.read2,
+            '-o', ppoutpath]
+        run_prog = subprocess.Popen(ppcmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
+        run_status = run_prog.communicate()
+        outlog.write('{0}\n'.format(run_status[0]))
+        outlog.write('{1}\n'.format(run_status[1]))
+        #If preprocessing failed, return error code
+        if run_status.returncode != 0:
+            return(None, run_status.returncode)
+        #Prepare index commands
+        ioutpath = '{0}/{1}'.format(outdir, self.name)
+        indexcmd = [sga_path, 'index', '-t', threads, '-a', 'ropebwt', '-p',
+            ioutpath, ppoutpath]
+        run_prog = subprocess.Popen(indexcmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
+        run_status = run_prog.communicate()
+        outlog.write('{0}\n'.format(run_status[0]))
+        outlog.write('{1}\n'.format(run_status[1]))
+        #If indexing failed, return error code
+        if run_status.returncode != 0:
+            return(None, run_status.returncode)
+        #Prepare correction command
+        coutpath = '{0}/{1}.ec.fq'.format(outdir, self.name)
+        ccmd = [sga_path, 'correct', '-t', threads, '-k', correct, '--learn',
+            '-p', ioutpath, '-o', coutpath, ppoutpath]
+        run_prog = subprocess.Popen(ccmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
+        run_status = run_prog.communicate()
+        outlog.write('{0}\n'.format(run_status[0]))
+        outlog.write('{1}\n'.format(run_status[1]))
+        #If correction failed, return error code
+        if run_status.returncode != 0:
+            return(None, run_status.returncode)
+        #Prepare filter command
 
 def subSample(fastq, outdir, size=1000000, readlen=0):
     fastqr1 = open(fastq[0])
