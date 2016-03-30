@@ -22,6 +22,7 @@ class Assemble:
         self.read2 = os.path.abspath(read2)
         self.outdir = os.path.abspath(outdir)
         self.name =name
+        print(self.read1, self.read2, self.outdir, self.name)
 
     def abyss(self, kmer=63, abyss_path='abyss-pe'):
         #Create ABySS folders
