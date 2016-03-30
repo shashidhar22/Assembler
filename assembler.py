@@ -79,7 +79,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(ppoutpath, run_status.returncode)
 
-    def sgaIndex(self, ppoutpath, reads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaIndex(self, ppoutpath, threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
         #Create sga index output directory
         ioutdir = '{0}/index'.format(outdir)
         if not os.path.exists(ioutdir):
