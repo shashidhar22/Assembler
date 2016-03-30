@@ -84,7 +84,7 @@ class Assemble:
         ioutdir = '{0}/index'.format(outdir)
         if not os.path.exists(ioutdir):
             os.mkdir(ioutdir)
-        ioutpath = = '{0}/{1}'.format(ioutdir, self.name)
+        ioutpath =  '{0}/{1}'.format(ioutdir, self.name)
         #Prepare index command
         indexcmd = [sga_path, 'index', '-t', threads, '-a', 'ropebwt', '-p',
             ioutpath, ppoutpath]
