@@ -17,13 +17,13 @@ from multiprocessing import Pool
 from collections import defaultdict
 
 class Assemble:
-    def __init__(self,outdir=os.path.abspath(os.getcwd), name='sample', read1, read2):
+    def __init__(outdir=os.path.abspath(os.getcwd), name='sample', self, read1, read2):
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
         self.outdir = os.path.abspath(outdir)
         self.name=name
 
-    def abyss(self, kmer=63, abyss_path='abyss-pe'):
+    def abyss(kmer=63, abyss_path='abyss-pe', self):
         #Create ABySS folders
         outdir = '{0}/abyss'.format(self.outdir)
         #Log file path
@@ -44,7 +44,7 @@ class Assemble:
         outlog.close()
         return('{0}-contigs.fa'.format(outpath), run_status.returncode)
 
-    def ngopt(self, ngopt_path='a5_pipeline.pl'):
+    def ngopt(ngopt_path='a5_pipeline.pl', self):
         #Create NGOPT folders
         outdir = '{0}/ngopt'.format(self.outdir)
         outlog = open('{0}/ngopt.log'.format(outdir), 'w')
@@ -62,7 +62,7 @@ class Assemble:
         outlog.close()
         return('{0}.contigs.fasta'.format(outpath), run_status.returncode)
 
-    def sgaPreProcess(self, threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaPreProcess(threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', self):
         #Create sga preprocessing output directory
         ppoutdir = '{0}/preprocess'.format(outdir)
         if not os.path.exists(ppoutdir):
@@ -79,7 +79,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(ppoutpath, run_status.returncode)
 
-    def sgaIndex(self, threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ppoutpath):
+    def sgaIndex(threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ppoutpath, self):
         #Create sga index output directory
         ioutdir = '{0}/index'.format(outdir)
         if not os.path.exists(ioutdir):
@@ -95,7 +95,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(ioutpath, run_status.returncode)
 
-    def sgaCorrect(self, threads=8, correct=41, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ioutpath, ppoutpath):
+    def sgaCorrect(threads=8, correct=41, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ioutpath, ppoutpath, self):
         #Create correction directory
         coutdir = '{0}/correct'.format(outdir)
         if not os.path.exists(coutdir):
@@ -111,7 +111,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(coutpath, run_status.returncode)
 
-    def sgaFilter(self, threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ioutpath, coutpath):
+    def sgaFilter(threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ioutpath, coutpath, self):
         #Create filter directory
         foutdir = '{0}/filter'.format(outdir)
         if not os.path.exists(foutdir):
@@ -126,7 +126,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(foutpath, run_status.returncode)
 
-    def sgaOverlap(self, threads=8, overlap=75, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ioutpath, foutpath):
+    def sgaOverlap(threads=8, overlap=75, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ioutpath, foutpath, self):
         #Create overlap directory
         ooutdir = '{0}/overlap'.format(outdir)
         if not os.path.exists(ooutdir):
@@ -141,7 +141,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(ooutpath, run_status.returncode)
 
-    def sgaAssemble(self, threads=8, assemble=71, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ooutpath):
+    def sgaAssemble(threads=8, assemble=71, outdir=self.outdir, outlog=sys.stdout, sga_path='sga', ooutpath, self):
         #Create assemble directory
         aoutdir = '{0}/assemble'.format(outdir)
         if not os.path.exists(aoutdir):
@@ -156,7 +156,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(aoutpath, run_status.returncode)
 
-    def sga(self, correct=41, overlap=75, assemble=71, threads=8, sga_path='sga'):
+    def sga(correct=41, overlap=75, assemble=71, threads=8, sga_path='sga', self):
         #Rewrite SGA, break into parts to better allow pipelining
         #Create sga output directories
         outdir = '{0}/sga'.format(self.outdir)
@@ -201,7 +201,7 @@ class Assemble:
         else:
             return('{0}-contigs.fa'.format(aoutpath), aret)
 
-    def spades(self, k='27,49,71,93,115,127', spades_path='spades.py'):
+    def spades(k='27,49,71,93,115,127', spades_path='spades.py', self):
         #Create spades directory
         soutdir = '{0}/spades'.format(self.outdir)
         if not os.path.exists(soutdir):
@@ -218,7 +218,7 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(soutpath, run_status.returncode)
 
-    def pandaseq(self, minoverlap=3, maxoverlap=0, panda_path='pandaseq'):
+    def pandaseq(minoverlap=3, maxoverlap=0, panda_path='pandaseq', self):
         #Create pandaseq directory
         poutdir = '{0}/pandaseq'.format(self.outdir)
         if not os.path.exists(poutdir):
