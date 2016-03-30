@@ -17,7 +17,7 @@ from multiprocessing import Pool
 from collections import defaultdict
 
 class Assemble:
-    def __init__(self, read1, read2, outdir=os.path.abspath(os.getcwd), name='sample'):
+    def __init__(self, read1, read2, outdir=os.path.abspath(os.getcwd()), name='sample'):
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
         self.outdir = os.path.abspath(outdir)
