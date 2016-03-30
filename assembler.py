@@ -43,9 +43,9 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         outlog.close()
         return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_prog.returncode)
@@ -63,9 +63,9 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         outlog.close()
         return('{0}.contigs.fasta'.format(noutpath), run_prog.returncode)
@@ -85,9 +85,9 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
         outlog.write('SGA preprocessing:\n')
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(ppoutpath, run_prog.returncode)
 
@@ -105,9 +105,9 @@ class Assemble:
         run_prog = subprocess.Popen(indexcmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(ioutpath, run_prog.returncode)
 
@@ -125,9 +125,9 @@ class Assemble:
         run_prog = subprocess.Popen(ccmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(coutpath, run_prog.returncode)
 
@@ -144,9 +144,9 @@ class Assemble:
         run_prog = subprocess.Popen(fcmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(foutpath, run_prog.returncode)
 
@@ -163,9 +163,9 @@ class Assemble:
         run_prog = subprocess.Popen(ocmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(ooutpath, run_prog.returncode)
 
@@ -182,9 +182,9 @@ class Assemble:
         run_prog = subprocess.Popen(acmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(aoutpath, run_prog.returncode)
 
@@ -196,37 +196,37 @@ class Assemble:
             os.mkdir(outdir)
         outlog = open('{0}/sga.log'.format(outdir), 'w')
         #Run preprocessing
-        ppoutpath, ppret = sgaPreProcess(self, threads, outdir, outlog, sga_path)
+        ppoutpath, ppret = Assemble.sgaPreProcess(self, threads, outdir, outlog, sga_path)
         #If preprocessing failed, return error code
         if ppret != 0:
             return(None, ppret)
         #Run indexing
-        ioutpath, iret = sgaIndex(self, threads, outdir, outlog, sga_path, ppoutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, threads, outdir, outlog, sga_path, ppoutpath)
         #If indexing failed, return error code
         if iret != 0:
             return(None, iret)
         #Run correction
-        coutpath, cret = sgaCorrect(self, threads, correct, outdir, outlog, sga_path, ioutpath, ppoutpath)
+        coutpath, cret = Assemble.sgaCorrect(self, threads, correct, outdir, outlog, sga_path, ioutpath, ppoutpath)
         #If correction failed, return error code
         if cret != 0:
             return(None, cret)
         #Run post correction indexing
-        ioutpath, iret = sgaIndex(self, threads, outdir, outlog, sga_path, coutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, threads, outdir, outlog, sga_path, coutpath)
         #If indexing fails, return error code
         if iret != 0:
             return(None, iret)
         #Run filter
-        foutpath, fret = sgaFilter(self, threads, outdir, outlog, sga_path, ioutpath, coutpath)
+        foutpath, fret = Assemble.sgaFilter(self, threads, outdir, outlog, sga_path, ioutpath, coutpath)
         #If filter failed, return errror code
         if fret != 0:
             return(None, fret)
         #Run overlap
-        ooutpath, oret =  sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
+        ooutpath, oret =  Assemble.sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if oret != 0:
             return(None, oret)
         #Run overlap
-        aoutpath, aret =  sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
+        aoutpath, aret =  Assemble.sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if aret != 0:
             return(None, aret)
@@ -246,9 +246,9 @@ class Assemble:
         run_prog = subprocess.Popen(scmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(soutpath, run_prog.returncode)
 
@@ -265,9 +265,9 @@ class Assemble:
         run_prog = subprocess.Popen(scmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(poutpath, run_prog.returncode)
 
