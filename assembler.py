@@ -39,15 +39,11 @@ class Assemble:
         inpath = 'in=\'{0} {1}\''.format(self.read1, self.read2)
         kparam = 'k={0}'.format(kmer)
         cmd = [abyss_path, aoutpath, kparam, inpath]
-        run_prog = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, shell=False)
+        run_prog = subprocess.Popen(cmd, stdout=outlog,
+            stderr=outlog, shell=False)
         #Capture stdout and stderr
         run_status = run_prog.communicate()
-        for lines in run_status[0].split('\n'):
-            outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1].split('\n'):
-            outlog.write('{0}\n'.format(lines))
-        outlog.close()
+        outlog.flush()
         return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_prog.returncode)
 
     def ngopt(self, ngopt_path='a5_pipeline.pl'):
