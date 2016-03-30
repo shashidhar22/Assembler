@@ -26,10 +26,10 @@ class Assemble:
     def abyss(self, kmer=63, abyss_path='abyss-pe'):
         #Create ABySS folders
         aoutdir = '{0}/abyss'.format(self.outdir)
-        #Log file path
-        outlog = open('{0}/abyss.log'.format(aoutdir), 'w')
         if not os.path.exists(aoutdir):
             os.mkdir(aoutdir)
+        #Log file path
+        outlog = open('{0}/abyss.log'.format(aoutdir), 'w')
         #Prepare abyss run command
         aoutpath = 'name={0}/{1}'.format(aoutdir, self.name)
         inpath = 'in=\'{0} {1}\''.format(self.read1, self.read2)
