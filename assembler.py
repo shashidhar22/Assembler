@@ -62,8 +62,10 @@ class Assemble:
         outlog.close()
         return('{0}.contigs.fasta'.format(outpath), run_status.returncode)
 
-    def sgaPreProcess(self, threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaPreProcess(self, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create sga preprocessing output directory
+        if outdir:
+            outdir = self.outdir
         ppoutdir = '{0}/preprocess'.format(outdir)
         if not os.path.exists(ppoutdir):
             os.mkdir(ppoutdir)
@@ -79,8 +81,10 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(ppoutpath, run_status.returncode)
 
-    def sgaIndex(self, ppoutpath, reads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaIndex(self, ppoutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create sga index output directory
+        if outdir:
+            outdir = self.outdir
         ioutdir = '{0}/index'.format(outdir)
         if not os.path.exists(ioutdir):
             os.mkdir(ioutdir)
@@ -95,8 +99,10 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(ioutpath, run_status.returncode)
 
-    def sgaCorrect(self, ioutpath, ppoutpath, threads=8, correct=41, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaCorrect(self, ioutpath, ppoutpath, threads=8, correct=41, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create correction directory
+        if outdir:
+            outdir = self.outdir
         coutdir = '{0}/correct'.format(outdir)
         if not os.path.exists(coutdir):
             os.mkdir(coutdir)
@@ -111,8 +117,10 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(coutpath, run_status.returncode)
 
-    def sgaFilter(self, ioutpath, coutpath, threads=8, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaFilter(self, ioutpath, coutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create filter directory
+        if outdir:
+            outdir = self.outdir
         foutdir = '{0}/filter'.format(outdir)
         if not os.path.exists(foutdir):
             os.mkdir(foutdir)
@@ -126,8 +134,10 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(foutpath, run_status.returncode)
 
-    def sgaOverlap(self, ioutpath, foutpath, threads=8, overlap=75, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaOverlap(self, ioutpath, foutpath, threads=8, overlap=75, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create overlap directory
+        if outdir:
+            outdir = self.outdir
         ooutdir = '{0}/overlap'.format(outdir)
         if not os.path.exists(ooutdir):
             os.mkdir(ooutdir)
@@ -141,8 +151,10 @@ class Assemble:
         outlog.write('{1}\n'.format(run_status[1]))
         return(ooutpath, run_status.returncode)
 
-    def sgaAssemble(self, ooutpath, threads=8, assemble=71, outdir=self.outdir, outlog=sys.stdout, sga_path='sga'):
+    def sgaAssemble(self, ooutpath, threads=8, assemble=71, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create assemble directory
+        if outdir:
+            outdir = self.outdir
         aoutdir = '{0}/assemble'.format(outdir)
         if not os.path.exists(aoutdir):
             os.mkdir(aoutdir)
