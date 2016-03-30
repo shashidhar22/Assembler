@@ -196,37 +196,37 @@ class Assemble:
             os.mkdir(outdir)
         outlog = open('{0}/sga.log'.format(outdir), 'w')
         #Run preprocessing
-        ppoutpath, ppret = sgaPreProcess(self, threads, outdir, outlog, sga_path)
+        ppoutpath, ppret = Assemble.sgaPreProcess(self, threads, outdir, outlog, sga_path)
         #If preprocessing failed, return error code
         if ppret != 0:
             return(None, ppret)
         #Run indexing
-        ioutpath, iret = sgaIndex(self, threads, outdir, outlog, sga_path, ppoutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, threads, outdir, outlog, sga_path, ppoutpath)
         #If indexing failed, return error code
         if iret != 0:
             return(None, iret)
         #Run correction
-        coutpath, cret = sgaCorrect(self, threads, correct, outdir, outlog, sga_path, ioutpath, ppoutpath)
+        coutpath, cret = Assemble.sgaCorrect(self, threads, correct, outdir, outlog, sga_path, ioutpath, ppoutpath)
         #If correction failed, return error code
         if cret != 0:
             return(None, cret)
         #Run post correction indexing
-        ioutpath, iret = sgaIndex(self, threads, outdir, outlog, sga_path, coutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, threads, outdir, outlog, sga_path, coutpath)
         #If indexing fails, return error code
         if iret != 0:
             return(None, iret)
         #Run filter
-        foutpath, fret = sgaFilter(self, threads, outdir, outlog, sga_path, ioutpath, coutpath)
+        foutpath, fret = Assemble.sgaFilter(self, threads, outdir, outlog, sga_path, ioutpath, coutpath)
         #If filter failed, return errror code
         if fret != 0:
             return(None, fret)
         #Run overlap
-        ooutpath, oret =  sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
+        ooutpath, oret =  Assemble.sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if oret != 0:
             return(None, oret)
         #Run overlap
-        aoutpath, aret =  sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
+        aoutpath, aret =  Assemble.sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if aret != 0:
             return(None, aret)
