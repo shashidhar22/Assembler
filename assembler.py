@@ -43,9 +43,9 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         outlog.close()
         return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_prog.returncode)
@@ -63,9 +63,9 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         outlog.close()
         return('{0}.contigs.fasta'.format(noutpath), run_prog.returncode)
@@ -85,9 +85,9 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
         outlog.write('SGA preprocessing:\n')
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(ppoutpath, run_prog.returncode)
 
@@ -105,9 +105,9 @@ class Assemble:
         run_prog = subprocess.Popen(indexcmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(ioutpath, run_prog.returncode)
 
@@ -125,9 +125,9 @@ class Assemble:
         run_prog = subprocess.Popen(ccmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(coutpath, run_prog.returncode)
 
@@ -144,9 +144,9 @@ class Assemble:
         run_prog = subprocess.Popen(fcmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(foutpath, run_prog.returncode)
 
@@ -163,9 +163,9 @@ class Assemble:
         run_prog = subprocess.Popen(ocmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(ooutpath, run_prog.returncode)
 
@@ -182,9 +182,9 @@ class Assemble:
         run_prog = subprocess.Popen(acmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(aoutpath, run_prog.returncode)
 
@@ -246,9 +246,9 @@ class Assemble:
         run_prog = subprocess.Popen(scmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(soutpath, run_prog.returncode)
 
@@ -265,9 +265,9 @@ class Assemble:
         run_prog = subprocess.Popen(scmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        for lines in run_status[0]:
+        for lines in run_status[0].split('\n'):
             outlog.write('{0}\n'.format(lines))
-        for lines in run_status[1]:
+        for lines in run_status[1].split('\n'):
             outlog.write('{0}\n'.format(lines))
         return(poutpath, run_prog.returncode)
 
