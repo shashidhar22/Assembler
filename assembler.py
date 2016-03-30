@@ -25,16 +25,16 @@ class Assemble:
 
     def abyss(self, kmer=63, abyss_path='abyss-pe'):
         #Create ABySS folders
-        outdir = '{0}/abyss'.format(self.outdir)
+        aoutdir = '{0}/abyss'.format(self.outdir)
         #Log file path
-        outlog = open('{0}/abyss.log'.format(outdir), 'w')
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
+        outlog = open('{0}/abyss.log'.format(aoutdir), 'w')
+        if not os.path.exists(aoutdir):
+            os.mkdir(aoutdir)
         #Prepare abyss run command
-        outpath = 'name={0}/{1}'.format(outdir, self.name)
+        aoutpath = 'name={0}/{1}'.format(aoutdir, self.name)
         inpath = 'in=\'{0} {1}\''.format(self.read1, self.read2)
         kparam = 'k={0}'.format(kmer)
-        cmd = [abyss_path, outpath, kparam, inpath]
+        cmd = [abyss_path, aoutpath, kparam, inpath]
         run_prog = subprocess.Popen(cmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
@@ -42,17 +42,17 @@ class Assemble:
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{0}\n'.format(run_status[1]))
         outlog.close()
-        return('{0}-contigs.fa'.format(outpath), run_status.returncode)
+        return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_status.returncode)
 
     def ngopt(self, ngopt_path='a5_pipeline.pl'):
         #Create NGOPT folders
-        outdir = '{0}/ngopt'.format(self.outdir)
-        outlog = open('{0}/ngopt.log'.format(outdir), 'w')
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
+        noutdir = '{0}/ngopt'.format(self.outdir)
+        if not os.path.exists(noutdir):
+            os.mkdir(noutdir)
+        outlog = open('{0}/ngopt.log'.format(noutdir), 'w')
         #Prepare run commands
-        outpath = '{0}/{1}'.format(outdir, self.name)
-        cmd = [ngopt_path, self.read1, self.read2, outpath]
+        noutpath = '{0}/{1}'.format(noutdir, self.name)
+        cmd = [ngopt_path, self.read1, self.read2, noutpath]
         run_prog = subprocess.Popen(cmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
@@ -60,7 +60,7 @@ class Assemble:
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
         outlog.close()
-        return('{0}.contigs.fasta'.format(outpath), run_status.returncode)
+        return('{0}.contigs.fasta'.format(noutpath), run_status.returncode)
 
     def sgaPreProcess(self, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create sga preprocessing output directory
