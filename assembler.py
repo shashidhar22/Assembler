@@ -17,7 +17,7 @@ from multiprocessing import Pool
 from collections import defaultdict
 
 class Assemble:
-    def __init__(self, read1, read2, outdir, name):
+    def __init__(self, read1, read2, outdir=None, name='sample'):
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
         if outdir != None:
@@ -285,4 +285,4 @@ if __name__ == '__main__':
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.5')
     opts = pbrazi.parse_args()
     if opts.mode == 'test':
-        unitTest(opts.read1, opts.read2, opts.outdir, opts.name)
+        unitTest(opts.read1, opts.read2, opts.name, opts.outdir)
