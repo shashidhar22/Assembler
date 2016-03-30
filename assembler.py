@@ -236,7 +236,7 @@ class Assemble:
         return(poutpath, run_status.returncode)
 
 def unitTest(read1, read2, name, outdir):
-    assemble = Assemble.Assemble(outdir, name, read1, read2)
+    assemble = Assemble(outdir, name, read1, read2)
     abyss_contig, returncode = assemble.abyss()
     if returncode != 0:
         print("AbySS failed")
