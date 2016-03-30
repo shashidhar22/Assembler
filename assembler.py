@@ -43,8 +43,10 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         outlog.close()
         return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_prog.returncode)
 
@@ -61,8 +63,10 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         outlog.close()
         return('{0}.contigs.fasta'.format(noutpath), run_prog.returncode)
 
@@ -81,8 +85,10 @@ class Assemble:
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
         outlog.write('SGA preprocessing:\n')
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(ppoutpath, run_prog.returncode)
 
     def sgaIndex(self, ppoutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -99,8 +105,10 @@ class Assemble:
         run_prog = subprocess.Popen(indexcmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(ioutpath, run_prog.returncode)
 
     def sgaCorrect(self, ioutpath, ppoutpath, threads=8, correct=41, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -117,8 +125,10 @@ class Assemble:
         run_prog = subprocess.Popen(ccmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(coutpath, run_prog.returncode)
 
     def sgaFilter(self, ioutpath, coutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -134,8 +144,10 @@ class Assemble:
         run_prog = subprocess.Popen(fcmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(foutpath, run_prog.returncode)
 
     def sgaOverlap(self, ioutpath, foutpath, threads=8, overlap=75, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -151,8 +163,10 @@ class Assemble:
         run_prog = subprocess.Popen(ocmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(ooutpath, run_prog.returncode)
 
     def sgaAssemble(self, ooutpath, threads=8, assemble=71, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -168,17 +182,19 @@ class Assemble:
         run_prog = subprocess.Popen(acmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(aoutpath, run_prog.returncode)
 
     def sga(self, correct=41, overlap=75, assemble=71, threads=8, sga_path='sga'):
         #Rewrite SGA, break into parts to better allow pipelining
         #Create sga output directories
         outdir = '{0}/sga'.format(self.outdir)
-        outlog = open('{0}/sga.log'.format(outdir), 'w')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
+        outlog = open('{0}/sga.log'.format(outdir), 'w')
         #Run preprocessing
         ppoutpath, ppret = sgaPreProcess(self, threads, outdir, outlog, sga_path)
         #If preprocessing failed, return error code
@@ -230,8 +246,10 @@ class Assemble:
         run_prog = subprocess.Popen(scmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(soutpath, run_prog.returncode)
 
     def pandaseq(self, minoverlap=3, maxoverlap=0, panda_path='pandaseq'):
@@ -247,8 +265,10 @@ class Assemble:
         run_prog = subprocess.Popen(scmd, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, shell=False)
         run_status = run_prog.communicate()
-        outlog.write('{0}\n'.format(run_status[0]))
-        outlog.write('{0}\n'.format(run_status[1]))
+        for lines in run_status[0]:
+            outlog.write('{0}\n'.format(lines))
+        for lines in run_status[1]:
+            outlog.write('{0}\n'.format(lines))
         return(poutpath, run_prog.returncode)
 
 def unitTest(read1, read2, name, outdir):
