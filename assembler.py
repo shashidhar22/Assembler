@@ -20,7 +20,7 @@ class Assemble:
     def __init__(self, read1, read2, outdir=None, name='sample'):
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
-        if outdir:
+        if outdir != None:
             self.outdir = os.path.abspath(outdir)
         else:
             self.outdir = os.path.abspath(os.getcwd())
