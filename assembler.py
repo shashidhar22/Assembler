@@ -46,7 +46,7 @@ class Assemble:
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{0}\n'.format(run_status[1]))
         outlog.close()
-        return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_status.returncode)
+        return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_prog.returncode)
 
     def ngopt(self, ngopt_path='a5_pipeline.pl'):
         #Create NGOPT folders
@@ -64,7 +64,7 @@ class Assemble:
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
         outlog.close()
-        return('{0}.contigs.fasta'.format(noutpath), run_status.returncode)
+        return('{0}.contigs.fasta'.format(noutpath), run_prog.returncode)
 
     def sgaPreProcess(self, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create sga preprocessing output directory
@@ -83,7 +83,7 @@ class Assemble:
         outlog.write('SGA preprocessing:\n')
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(ppoutpath, run_status.returncode)
+        return(ppoutpath, run_prog.returncode)
 
     def sgaIndex(self, ppoutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create sga index output directory
@@ -101,7 +101,7 @@ class Assemble:
         run_status = run_prog.communicate()
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(ioutpath, run_status.returncode)
+        return(ioutpath, run_prog.returncode)
 
     def sgaCorrect(self, ioutpath, ppoutpath, threads=8, correct=41, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create correction directory
@@ -119,7 +119,7 @@ class Assemble:
         run_status = run_prog.communicate()
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(coutpath, run_status.returncode)
+        return(coutpath, run_prog.returncode)
 
     def sgaFilter(self, ioutpath, coutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create filter directory
@@ -136,7 +136,7 @@ class Assemble:
         run_status = run_prog.communicate()
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(foutpath, run_status.returncode)
+        return(foutpath, run_prog.returncode)
 
     def sgaOverlap(self, ioutpath, foutpath, threads=8, overlap=75, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create overlap directory
@@ -153,7 +153,7 @@ class Assemble:
         run_status = run_prog.communicate()
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(ooutpath, run_status.returncode)
+        return(ooutpath, run_prog.returncode)
 
     def sgaAssemble(self, ooutpath, threads=8, assemble=71, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create assemble directory
@@ -170,7 +170,7 @@ class Assemble:
         run_status = run_prog.communicate()
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(aoutpath, run_status.returncode)
+        return(aoutpath, run_prog.returncode)
 
     def sga(self, correct=41, overlap=75, assemble=71, threads=8, sga_path='sga'):
         #Rewrite SGA, break into parts to better allow pipelining
@@ -232,7 +232,7 @@ class Assemble:
         run_status = run_prog.communicate()
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(soutpath, run_status.returncode)
+        return(soutpath, run_prog.returncode)
 
     def pandaseq(self, minoverlap=3, maxoverlap=0, panda_path='pandaseq'):
         #Create pandaseq directory
@@ -249,7 +249,7 @@ class Assemble:
         run_status = run_prog.communicate()
         outlog.write('{0}\n'.format(run_status[0]))
         outlog.write('{1}\n'.format(run_status[1]))
-        return(poutpath, run_status.returncode)
+        return(poutpath, run_prog.returncode)
 
 def unitTest(read1, read2, name, outdir):
     assemble = Assemble(read1, read2, outdir, name)
