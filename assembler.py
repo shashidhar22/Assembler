@@ -280,8 +280,8 @@ class Assemble:
         print(' '.join(pcmd))
         return(poutpath, run_prog.returncode)
 
-def unitTest(read1, read2, name, outdir):
-    assemble = Assemble(read1, read2, outdir, name)
+def unitTest(read1, read2, name, outdir, threads):
+    assemble = Assemble(read1, read2, outdir, name, threads)
     abyss_contig, returncode = assemble.abyss()
     if returncode != 0:
         print("AbySS failed")
@@ -309,9 +309,11 @@ if __name__ == '__main__':
         help='Output directory.')
     pbrazi.add_argument('-n', '--sample', type=str, dest='name',
         help='Sample name')
+    pbrazi.add_argument('-t', '--threads', type=str, dest='name', default='2'
+        help='Sample name')
     pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
         choices=['test'], help='Sample name')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.5')
     opts = pbrazi.parse_args()
     if opts.mode == 'test':
-        unitTest(opts.read1, opts.read2, opts.name, opts.outdir)
+        unitTest(opts.read1, opts.read2, opts.name, opts.outdir, opts.threads)
