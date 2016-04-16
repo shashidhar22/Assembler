@@ -309,8 +309,8 @@ if __name__ == '__main__':
         help='Output directory.')
     pbrazi.add_argument('-n', '--sample', type=str, dest='name',
         help='Sample name')
-    pbrazi.add_argument('-t', '--threads', type=str, dest='name', default='2'
-        help='Sample name')
+    pbrazi.add_argument('-t', '--threads', type=str, dest='name', default='2',
+        help='Number of threads')
     pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
         choices=['test'], help='Sample name')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.5')
