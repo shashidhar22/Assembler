@@ -17,18 +17,24 @@ from multiprocessing import Pool
 from collections import defaultdict
 
 class Assemble:
-    def __init__(self, read1, read2, outdir=None, name='sample'):
+    def __init__(self, read1, read2, outdir=None, name='sample', threads=None ):
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
         if outdir != None:
             self.outdir = os.path.abspath(outdir)
         else:
             self.outdir = os.path.abspath(os.getcwd())
+        if threads != None:
+            self.threads = threads
+        else:
+            self.threads = 2
         self.name =name
-        print(self.read1, self.read2, self.outdir, self.name)
+        return
 
-    def abyss(self, kmer=63, abyss_path='abyss-pe'):
+    def abyss(self, abyss_path='abyss-pe', abyss_param=None):
         #Create ABySS folders
+        if abyss_param == None:
+            abyss_param = ['k=63']
         aoutdir = '{0}/abyss'.format(self.outdir)
         if not os.path.exists(aoutdir):
             os.mkdir(aoutdir)
@@ -38,15 +44,19 @@ class Assemble:
         aoutpath = 'name={0}/{1}'.format(aoutdir, self.name)
         inpath = 'in=\'{0} {1}\''.format(self.read1, self.read2)
         kparam = 'k={0}'.format(kmer)
-        cmd = [abyss_path, aoutpath, kparam, inpath]
-        run_prog = subprocess.Popen(cmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        acmd = [abyss_path, aoutpath, inpath] + abyss_param
+        print(' '.join(acmd))
+        #run_prog = subprocess.Popen(cmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
+        #run_status = run_prog.communicate()
+        run_prog.returncode = 0
         outlog.flush()
         return('{0}/{1}-contigs.fa'.format(aoutdir, self.name), run_prog.returncode)
 
-    def ngopt(self, ngopt_path='a5_pipeline.pl'):
+    def ngopt(self, ngopt_path='a5_pipeline.pl', ngopt_param=None):
+        if ngopt_param == None:
+            ngopt_param = []
         #Create NGOPT folders
         noutdir = '{0}/ngopt'.format(self.outdir)
         if not os.path.exists(noutdir):
@@ -54,13 +64,14 @@ class Assemble:
         outlog = open('{0}/ngopt.log'.format(noutdir), 'w')
         #Prepare run commands
         noutpath = '{0}/{1}'.format(noutdir, self.name)
-        cmd = [ngopt_path, self.read1, self.read2, noutpath]
-        run_prog = subprocess.Popen(cmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        ncmd = [ngopt_path, self.read1, self.read2, noutpath] + ngopt_param
+        #run_prog = subprocess.Popen(cmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(ncmd))
         return('{0}.contigs.fasta'.format(noutpath), run_prog.returncode)
 
     def sgaPreProcess(self, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -74,12 +85,13 @@ class Assemble:
         ppoutpath = '{0}/{1}.fastq'.format(ppoutdir, self.name)
         ppcmd = [sga_path, 'preprocess', '-p', '1', self.read1, self.read2,
             '-o', ppoutpath]
-        run_prog = subprocess.Popen(ppcmd, stdout=outlog,
+        #run_prog = subprocess.Popen(ppcmd, stdout=outlog,
             stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(ppcmd))
         return(ppoutpath, run_prog.returncode)
 
     def sgaIndex(self, ppoutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -91,14 +103,15 @@ class Assemble:
             os.mkdir(ioutdir)
         ioutpath =  '{0}/{1}'.format(ioutdir, self.name)
         #Prepare index command
-        indexcmd = [sga_path, 'index', '-t', threads, '-a', 'ropebwt', '-p',
+        icmd = [sga_path, 'index', '-t', threads, '-a', 'ropebwt', '-p',
             ioutpath, ppoutpath]
-        run_prog = subprocess.Popen(indexcmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        #run_prog = subprocess.Popen(indexcmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(icmd))
         return(ioutpath, run_prog.returncode)
 
     def sgaCorrect(self, ioutpath, ppoutpath, threads=8, correct=41, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -112,13 +125,14 @@ class Assemble:
         #Prepare correction command
         ccmd = [sga_path, 'correct', '-t', threads, '-k', str(correct), '--learn',
             '-p', ioutpath, '-o', coutpath, ppoutpath]
-        run_prog = subprocess.Popen(ccmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        #run_prog = subprocess.Popen(ccmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
-        return(coutpath, run_prog.returncode)
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(ccmd))
+        return(coutpath, run_prog.returncode )
 
     def sgaFilter(self, ioutpath, coutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create filter directory
@@ -130,12 +144,13 @@ class Assemble:
         foutpath = '{0}/{1}.filter.pass.fq'.format(foutdir, self.name)
         #Prepare filter command
         fcmd = [sga_path, 'filter', '-x', '2', '-t', threads, '-p', ioutpath, '-o', foutpath]
-        run_prog = subprocess.Popen(fcmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        #run_prog = subprocess.Popen(fcmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(fcmd))
         return(foutpath, run_prog.returncode)
 
     def sgaOverlap(self, ioutpath, foutpath, threads=8, overlap=75, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -148,12 +163,13 @@ class Assemble:
         ooutpath = '{0}/{1}.ec.filter.pass.asqg.gz'.format(ooutdir, self.name)
         ocmd = [sga_path, 'overlap', '-m', str(overlap), '-t', '8', '-o',
                     ooutpath, '-p', ioutpath, foutpath]
-        run_prog = subprocess.Popen(ocmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        #run_prog = subprocess.Popen(ocmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(ocmd))
         return(ooutpath, run_prog.returncode)
 
     def sgaAssemble(self, ooutpath, threads=8, assemble=71, outdir=None, outlog=sys.stdout, sga_path='sga'):
@@ -166,60 +182,65 @@ class Assemble:
         aoutpath = '{0}/{1}'.format(aoutdir, self.name)
         acmd = [sga_path, 'assemble', '-t', threads, '-m', str(assemble), '-o', aoutpath,
                         ooutpath]
-        run_prog = subprocess.Popen(acmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        #run_prog = subprocess.Popen(acmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(acmd))
         return(aoutpath, run_prog.returncode)
 
-    def sga(self, correct=41, overlap=75, assemble=71, threads=8, sga_path='sga'):
+    def sga(self, sga_path='sga', sga_params):
         #Rewrite SGA, break into parts to better allow pipelining
+        if sga_params == None:
+            sga_params = [41, 75, 71]
         #Create sga output directories
-        outdir = '{0}/sga'.format(self.outdir)
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
-        outlog = open('{0}/sga.log'.format(outdir), 'w')
+        soutdir = '{0}/sga'.format(self.outdir)
+        if not os.path.exists(soutdir):
+            os.mkdir(soutdir)
+        outlog = open('{0}/sga.log'.format(soutdir), 'w')
         #Run preprocessing
-        ppoutpath, ppret = Assemble.sgaPreProcess(self, threads, outdir, outlog, sga_path)
+        ppoutpath, ppret = Assemble.sgaPreProcess(self, threads, soutdir, outlog, sga_path)
         #If preprocessing failed, return error code
         if ppret != 0:
             return(None, ppret)
         #Run indexing
-        ioutpath, iret = Assemble.sgaIndex(self, threads, outdir, outlog, sga_path, ppoutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, threads, soutdir, outlog, sga_path, ppoutpath)
         #If indexing failed, return error code
         if iret != 0:
             return(None, iret)
         #Run correction
-        coutpath, cret = Assemble.sgaCorrect(self, threads, correct, outdir, outlog, sga_path, ioutpath, ppoutpath)
+        coutpath, cret = Assemble.sgaCorrect(self, threads, sga_params[0], soutdir, outlog, sga_path, ioutpath, ppoutpath)
         #If correction failed, return error code
         if cret != 0:
             return(None, cret)
         #Run post correction indexing
-        ioutpath, iret = Assemble.sgaIndex(self, threads, outdir, outlog, sga_path, coutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, threads, soutdir, outlog, sga_path, coutpath)
         #If indexing fails, return error code
         if iret != 0:
             return(None, iret)
         #Run filter
-        foutpath, fret = Assemble.sgaFilter(self, threads, outdir, outlog, sga_path, ioutpath, coutpath)
+        foutpath, fret = Assemble.sgaFilter(self, threads, soutdir, outlog, sga_path, ioutpath, coutpath)
         #If filter failed, return errror code
         if fret != 0:
             return(None, fret)
         #Run overlap
-        ooutpath, oret =  Assemble.sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
+        ooutpath, oret =  Assemble.sgaOverlap(self, threads, sga_params[1], outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if oret != 0:
             return(None, oret)
         #Run overlap
-        aoutpath, aret =  Assemble.sgaOverlap(self, threads, overlap, outdir, outlog, sga_path, ioutpath, foutpath)
+        aoutpath, aret =  Assemble.sgaOverlap(self, threads, sga_params[2], outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if aret != 0:
             return(None, aret)
         else:
             return('{0}-contigs.fa'.format(aoutpath), aret)
 
-    def spades(self, k='27,49,71,93,115,127', spades_path='spades.py'):
+    def spades(self, spades_path='spades.py', spades_params=None):
+        if spades_params == None:
+            spades_params = ['--careful', '-k', '27,49,71,93,115,127']
         #Create spades directory
         soutdir = '{0}/spades'.format(self.outdir)
         if not os.path.exists(soutdir):
@@ -227,17 +248,20 @@ class Assemble:
         outlog = open('{0}/spades.log'.format(soutdir), 'w')
         soutpath= '{0}/contigs.fasta'.format(soutdir)
         #Prepare spades command
-        scmd = [spades_path, '--careful', '-k', ksize, '--pe1-1', self.read1,
-                    '--pe1-2', self.read2, '-o', soutdir]
-        run_prog = subprocess.Popen(scmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        scmd = [spades_path, '--pe1-1', self.read1, '--pe1-2', self.read2,
+            '-o', soutdir] + spades_params
+        #run_prog = subprocess.Popen(scmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(scmd))
         return(soutpath, run_prog.returncode)
 
-    def pandaseq(self, minoverlap=3, maxoverlap=0, panda_path='pandaseq'):
+    def pandaseq(self, panda_path='pandaseq', panda_param=None):
+        if panda_param == None:
+            panda_param = ['-o', '3', '-O', '0']
         #Create pandaseq directory
         poutdir = '{0}/pandaseq'.format(self.outdir)
         if not os.path.exists(poutdir):
@@ -245,14 +269,15 @@ class Assemble:
         outlog = open('{0}/pandaseq.log'.format(soutdir), 'w')
         poutpath = '{0}/{1}.fa'.format(poutdir, self.name)
         #Prepare spades command
-        pcmd = [panda_path, '-o', minoverlap, '-O', maxoverlap,
-            '-f', self.read1,'-r', self.read2, '-w', poutpath]
-        run_prog = subprocess.Popen(pcmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        pcmd = [panda_path, '-f', self.read1,'-r', self.read2, '-w',
+            poutpath] + panda_param
+        #run_prog = subprocess.Popen(pcmd, stdout=outlog,
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
-        run_status = run_prog.communicate()
-        outlog.flush()
-
+        #run_status = run_prog.communicate()
+        #outlog.flush()
+        run_prog.returncode = 0
+        print(' '.join(pcmd))
         return(poutpath, run_prog.returncode)
 
 def unitTest(read1, read2, name, outdir):
