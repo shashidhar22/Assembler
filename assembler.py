@@ -74,7 +74,7 @@ class Assemble:
         print(' '.join(ncmd))
         return('{0}.contigs.fasta'.format(noutpath), run_prog.returncode)
 
-    def sgaPreProcess(self, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
+    def sgaPreProcess(self, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create sga preprocessing output directory
         if not outdir:
             outdir = self.outdir
@@ -94,7 +94,7 @@ class Assemble:
         print(' '.join(ppcmd))
         return(ppoutpath, run_prog.returncode)
 
-    def sgaIndex(self, ppoutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
+    def sgaIndex(self, ppoutpath, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create sga index output directory
         if not outdir:
             outdir = self.outdir
@@ -103,7 +103,7 @@ class Assemble:
             os.mkdir(ioutdir)
         ioutpath =  '{0}/{1}'.format(ioutdir, self.name)
         #Prepare index command
-        icmd = [sga_path, 'index', '-t', threads, '-a', 'ropebwt', '-p',
+        icmd = [sga_path, 'index', '-t', self.threads, '-a', 'ropebwt', '-p',
             ioutpath, ppoutpath]
         #run_prog = subprocess.Popen(indexcmd, stdout=outlog,
         #    stderr=outlog, shell=False)
@@ -114,7 +114,7 @@ class Assemble:
         print(' '.join(icmd))
         return(ioutpath, run_prog.returncode)
 
-    def sgaCorrect(self, ioutpath, ppoutpath, threads=8, correct=41, outdir=None, outlog=sys.stdout, sga_path='sga'):
+    def sgaCorrect(self, ioutpath, ppoutpath, correct=41, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create correction directory
         if not outdir:
             outdir = self.outdir
@@ -123,7 +123,7 @@ class Assemble:
             os.mkdir(coutdir)
         coutpath = '{0}/{1}.ec.fq'.format(coutdir, self.name)
         #Prepare correction command
-        ccmd = [sga_path, 'correct', '-t', threads, '-k', str(correct), '--learn',
+        ccmd = [sga_path, 'correct', '-t', self.threads, '-k', str(correct), '--learn',
             '-p', ioutpath, '-o', coutpath, ppoutpath]
         #run_prog = subprocess.Popen(ccmd, stdout=outlog,
         #    stderr=outlog, shell=False)
@@ -134,7 +134,7 @@ class Assemble:
         print(' '.join(ccmd))
         return(coutpath, run_prog.returncode )
 
-    def sgaFilter(self, ioutpath, coutpath, threads=8, outdir=None, outlog=sys.stdout, sga_path='sga'):
+    def sgaFilter(self, ioutpath, coutpath, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create filter directory
         if not outdir:
             outdir = self.outdir
@@ -143,7 +143,7 @@ class Assemble:
             os.mkdir(foutdir)
         foutpath = '{0}/{1}.filter.pass.fq'.format(foutdir, self.name)
         #Prepare filter command
-        fcmd = [sga_path, 'filter', '-x', '2', '-t', threads, '-p', ioutpath, '-o', foutpath]
+        fcmd = [sga_path, 'filter', '-x', '2', '-t', self.threads, '-p', ioutpath, '-o', foutpath]
         #run_prog = subprocess.Popen(fcmd, stdout=outlog,
         #    stderr=outlog, shell=False)
         #Capture stdout and stderr
@@ -153,7 +153,7 @@ class Assemble:
         print(' '.join(fcmd))
         return(foutpath, run_prog.returncode)
 
-    def sgaOverlap(self, ioutpath, foutpath, threads=8, overlap=75, outdir=None, outlog=sys.stdout, sga_path='sga'):
+    def sgaOverlap(self, ioutpath, foutpath, overlap=75, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create overlap directory
         if not outdir:
             outdir = self.outdir
@@ -161,7 +161,7 @@ class Assemble:
         if not os.path.exists(ooutdir):
             os.mkdir(ooutdir)
         ooutpath = '{0}/{1}.ec.filter.pass.asqg.gz'.format(ooutdir, self.name)
-        ocmd = [sga_path, 'overlap', '-m', str(overlap), '-t', '8', '-o',
+        ocmd = [sga_path, 'overlap', '-m', str(overlap), '-t', self.threads, '-o',
                     ooutpath, '-p', ioutpath, foutpath]
         #run_prog = subprocess.Popen(ocmd, stdout=outlog,
         #    stderr=outlog, shell=False)
@@ -172,7 +172,7 @@ class Assemble:
         print(' '.join(ocmd))
         return(ooutpath, run_prog.returncode)
 
-    def sgaAssemble(self, ooutpath, threads=8, assemble=71, outdir=None, outlog=sys.stdout, sga_path='sga'):
+    def sgaAssemble(self, ooutpath, assemble=71, outdir=None, outlog=sys.stdout, sga_path='sga'):
         #Create assemble directory
         if not outdir:
             outdir = self.outdir
@@ -180,7 +180,7 @@ class Assemble:
         if not os.path.exists(aoutdir):
             os.mkdir(aoutdir)
         aoutpath = '{0}/{1}'.format(aoutdir, self.name)
-        acmd = [sga_path, 'assemble', '-t', threads, '-m', str(assemble), '-o', aoutpath,
+        acmd = [sga_path, 'assemble', '-t', self.threads, '-m', str(assemble), '-o', aoutpath,
                         ooutpath]
         #run_prog = subprocess.Popen(acmd, stdout=outlog,
         #    stderr=outlog, shell=False)
@@ -191,7 +191,7 @@ class Assemble:
         print(' '.join(acmd))
         return(aoutpath, run_prog.returncode)
 
-    def sga(self, sga_path='sga', sga_params):
+    def sga(self, sga_path='sga', sga_params=None):
         #Rewrite SGA, break into parts to better allow pipelining
         if sga_params == None:
             sga_params = [41, 75, 71]
@@ -201,37 +201,37 @@ class Assemble:
             os.mkdir(soutdir)
         outlog = open('{0}/sga.log'.format(soutdir), 'w')
         #Run preprocessing
-        ppoutpath, ppret = Assemble.sgaPreProcess(self, threads, soutdir, outlog, sga_path)
+        ppoutpath, ppret = Assemble.sgaPreProcess(self, soutdir, outlog, sga_path)
         #If preprocessing failed, return error code
         if ppret != 0:
             return(None, ppret)
         #Run indexing
-        ioutpath, iret = Assemble.sgaIndex(self, threads, soutdir, outlog, sga_path, ppoutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, soutdir, outlog, sga_path, ppoutpath)
         #If indexing failed, return error code
         if iret != 0:
             return(None, iret)
         #Run correction
-        coutpath, cret = Assemble.sgaCorrect(self, threads, sga_params[0], soutdir, outlog, sga_path, ioutpath, ppoutpath)
+        coutpath, cret = Assemble.sgaCorrect(self, sga_params[0], soutdir, outlog, sga_path, ioutpath, ppoutpath)
         #If correction failed, return error code
         if cret != 0:
             return(None, cret)
         #Run post correction indexing
-        ioutpath, iret = Assemble.sgaIndex(self, threads, soutdir, outlog, sga_path, coutpath)
+        ioutpath, iret = Assemble.sgaIndex(self, soutdir, outlog, sga_path, coutpath)
         #If indexing fails, return error code
         if iret != 0:
             return(None, iret)
         #Run filter
-        foutpath, fret = Assemble.sgaFilter(self, threads, soutdir, outlog, sga_path, ioutpath, coutpath)
+        foutpath, fret = Assemble.sgaFilter(self, soutdir, outlog, sga_path, ioutpath, coutpath)
         #If filter failed, return errror code
         if fret != 0:
             return(None, fret)
         #Run overlap
-        ooutpath, oret =  Assemble.sgaOverlap(self, threads, sga_params[1], outdir, outlog, sga_path, ioutpath, foutpath)
+        ooutpath, oret =  Assemble.sgaOverlap(self, sga_params[1], outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if oret != 0:
             return(None, oret)
         #Run overlap
-        aoutpath, aret =  Assemble.sgaOverlap(self, threads, sga_params[2], outdir, outlog, sga_path, ioutpath, foutpath)
+        aoutpath, aret =  Assemble.sgaOverlap(self, sga_params[2], outdir, outlog, sga_path, ioutpath, foutpath)
         #If overlap failed, return error code
         if aret != 0:
             return(None, aret)
