@@ -86,7 +86,7 @@ class Assemble:
         ppcmd = [sga_path, 'preprocess', '-p', '1', self.read1, self.read2,
             '-o', ppoutpath]
         #run_prog = subprocess.Popen(ppcmd, stdout=outlog,
-            stderr=outlog, shell=False)
+        #    stderr=outlog, shell=False)
         #Capture stdout and stderr
         #run_status = run_prog.communicate()
         #outlog.flush()
