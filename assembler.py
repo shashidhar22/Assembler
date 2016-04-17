@@ -39,6 +39,7 @@ class Assemble:
         #Create ABySS folders
         if abyss_param == None:
             abyss_param = ['k=63']
+            print('Running ABySS with k size 63')
         aoutdir = '{0}/abyss'.format(self.outdir)
         if not os.path.exists(aoutdir):
             os.mkdir(aoutdir)
@@ -58,6 +59,7 @@ class Assemble:
     def ngopt(self, ngopt_path='a5_pipeline.pl', ngopt_param=None):
         if ngopt_param == None:
             ngopt_param = []
+            print('Running NGOPT pipeline, with IDBA')
         #Create NGOPT folders
         noutdir = '{0}/ngopt'.format(self.outdir)
         if not os.path.exists(noutdir):
@@ -184,6 +186,7 @@ class Assemble:
         #Rewrite SGA, break into parts to better allow pipelining
         if sga_params == None:
             sga_params = [41, 75, 71]
+            print('Running SGA with kmer sizes 41, 75, 71')
         #Create sga output directories
         soutdir = '{0}/sga'.format(self.outdir)
         if not os.path.exists(soutdir):
@@ -230,6 +233,7 @@ class Assemble:
     def spades(self, spades_path='spades.py', spades_params=None):
         if spades_params == None:
             spades_params = ['--careful', '-k', '27,49,71,93,115,127']
+            print('Running Spades with kmers 27,49,71,93,115,127, with error correction')
         #Create spades directory
         soutdir = '{0}/spades'.format(self.outdir)
         if not os.path.exists(soutdir):
@@ -300,9 +304,23 @@ def illuminaAssemble(data):
     abyss_contig, returncode = assemble.abyss()
     if returncode != 0:
         print("AbySS failed")
+    else:
+        print("AbySS assembly completed sucessfully")
     spades_contig, returncode = assemble.spades()
     if returncode != 0:
         print("Spades failed")
+    else:
+        print("Spades assembly completed sucessfully")
+    ngopt_contig, returncode = assemble.ngopt()
+    if returncode != 0:
+        print("NGOPT failed")
+    else:
+        print("NGOPT assembly completed sucessfully")
+    sga_contig, returncode = assemble.sga()
+    if returncode != 0:
+        print("SGA failed")
+    else:
+        print("SGA assembly completed sucessfully")
     return
 
 def unitTest(read1, read2, pacbio, name, outdir, threads):
