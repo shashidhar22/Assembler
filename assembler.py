@@ -17,10 +17,11 @@ from multiprocessing import Pool
 from collections import defaultdict
 
 class Assemble:
-    def __init__(self, read1, read2, pacbio, outdir=None, name='sample', threads=None ):
+    def __init__(self, read1, read2, pacbio=None, outdir=None, name='sample', threads=None ):
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
-        self.pacbio = os.path.abspath(pacbio)
+        if pacbio != None:
+            self.pacbio = os.path.abspath(pacbio)
         if outdir != None:
             self.outdir = os.path.abspath(outdir)
             if not os.path.exists(self.outdir):
@@ -46,7 +47,6 @@ class Assemble:
         #Prepare abyss run command
         aoutpath = 'name={0}/{1}'.format(aoutdir, self.name)
         inpath = 'in=\'{0} {1}\''.format(self.read1, self.read2)
-        kparam = 'k={0}'.format(kmer)
         acmd = [abyss_path, aoutpath, inpath] + abyss_param
         run_prog = subprocess.Popen(' '.join(acmd), stdout=outlog,
             stderr=outlog, shell=True)
@@ -247,7 +247,7 @@ class Assemble:
         return(soutpath, run_prog.returncode)
 
     def spadesPacbio(self, spades_path='spades.py', spades_params=None):
-        if spades_params == None
+        if spades_params == None:
             spades_params = ['--careful', '-k', '27,49,71,93,115,127']
         #Create spades directory
         soutdir = '{0}/spadesHybrid'.format(self.outdir)
@@ -286,7 +286,7 @@ class Assemble:
 
 def fungalAssemble(input_list):
     pool = Pool(len(input_list))
-    pool.map(sampleAssemble, input_list)
+    pool.map(illuminaAssemble, input_list)
     return
 
 def illuminaAssemble(data):
@@ -326,27 +326,30 @@ def unitTest(read1, read2, pacbio, name, outdir, threads):
 
 if __name__ == '__main__':
     pbrazi =  argparse.ArgumentParser(prog='assembler')
-    pbrazi.add_argument('-f', '--read1', type=str, dest='read1', nargs='+'
+    pbrazi.add_argument('-f', '--read1', type=str, dest='read1', nargs='+',
         help='Input fastq files, read1 followed by read2.')
-    pbrazi.add_argument('-r', '--read2', type=str, dest='read2', nargs='+'
+    pbrazi.add_argument('-r', '--read2', type=str, dest='read2', nargs='+',
         help='Input fastq files, read1 followed by read2.')
-    pbrazi.add_argument('-p', '--pacbio', type=str, dest='pacbio', nargs='+'
+    pbrazi.add_argument('-p', '--pacbio', type=str, dest='pacbio', nargs='+',
         help='Input pacbio reads.')
     pbrazi.add_argument('-o', '--outdir', type=str, dest='outdir', default=None,
         help='Output directory.')
-    pbrazi.add_argument('-n', '--sample', type=str, dest='name', default='sample'
+    pbrazi.add_argument('-n', '--sample', type=str, dest='name', default='sample',
         help='Sample name')
     pbrazi.add_argument('-t', '--threads', type=str, dest='threads', default='2',
         help='Number of threads')
     pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
-        choices=['test'], help='Sample name')
+        choices=['test', 'fungal'], help='Sample name')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.5')
     opts = pbrazi.parse_args()
+    if not os.path.exists(opts.outdir):
+        os.mkdir(opts.outdir)
     if opts.mode == 'fungal':
         input_dict = list()
         threads = str(int(opts.threads)/len(opts.read1))
-        for count, fwd, rev in enumerate(opts.read1, opts.read2):
-            input_dict.append([fwd, rev, opts.pacbio, '{0}{1}'.format(opts.name,count), opts.outdir, threads]
+        for count, (fwd, rev) in enumerate(zip(opts.read1, opts.read2)):
+            outdir = '{0}/{1}{2}'.format(opts.outdir, opts.name, count)
+            input_dict.append([fwd, rev, '{0}{1}'.format(opts.name,count), outdir, threads])
         fungalAssemble(input_dict)
     if opts.mode == 'test':
         unitTest(opts.read1[0], opts.read2[0], opts.pacbio[0], opts.name, opts.outdir, opts.threads)
