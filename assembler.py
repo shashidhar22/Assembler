@@ -17,9 +17,10 @@ from multiprocessing import Pool
 from collections import defaultdict
 
 class Assemble:
-    def __init__(self, read1, read2, outdir=None, name='sample', threads=None ):
+    def __init__(self, read1, read2, pacbio, outdir=None, name='sample', threads=None ):
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
+        self.pacbio = os.path.abspath(pacbio)
         if outdir != None:
             self.outdir = os.path.abspath(outdir)
             if not os.path.exists(self.outdir):
@@ -245,6 +246,25 @@ class Assemble:
         outlog.flush()
         return(soutpath, run_prog.returncode)
 
+    def spadesPacbio(self, spades_path='spades.py', spades_params=None):
+        if spades_params == None
+            spades_params = ['--careful', '-k', '27,49,71,93,115,127']
+        #Create spades directory
+        soutdir = '{0}/spadesHybrid'.format(self.outdir)
+        if not os.path.exists(soutdir):
+            os.mkdir(soutdir)
+        outlog = open('{0}/spadesHybrid.log'.format(soutdir), 'w')
+        soutpath= '{0}/contigs.fasta'.format(soutdir)
+        #Prepare spades command
+        scmd = [spades_path, '--pe1-1', self.read1, '--pe1-2', self.read2,
+            '--pacbio-reads', self.pacbio, '-o', soutdir] + spades_params
+        run_prog = subprocess.Popen(scmd, stdout=outlog,
+            stderr=outlog, shell=False)
+        #Capture stdout and stderr
+        run_status = run_prog.communicate()
+        outlog.flush()
+        return(soutpath, run_prog.returncode)
+
     def pandaseq(self, panda_path='pandaseq', panda_param=None):
         if panda_param == None:
             panda_param = ['-B', '-o', '3', '-O', '0']
@@ -264,7 +284,28 @@ class Assemble:
         outlog.flush()
         return(poutpath, run_prog.returncode)
 
-def unitTest(read1, read2, name, outdir, threads):
+def fungalAssemble(input_list):
+    pool = Pool(len(input_list))
+    pool.map(sampleAssemble, input_list)
+    return
+
+def illuminaAssemble(data):
+    read1 = data[0]
+    read2 = data[1]
+    name = data[2]
+    outdir = data[3]
+    threads = data[4]
+    pacbio = None
+    assemble = Assemble(read1, read2, pacbio, outdir, name, threads)
+    abyss_contig, returncode = assemble.abyss()
+    if returncode != 0:
+        print("AbySS failed")
+    spades_contig, returncode = assemble.spades()
+    if returncode != 0:
+        print("Spades failed")
+    return
+
+def unitTest(read1, read2, pacbio, name, outdir, threads):
     assemble = Assemble(read1, read2, outdir, name, threads)
     abyss_contig, returncode = assemble.abyss()
     if returncode != 0:
@@ -285,13 +326,15 @@ def unitTest(read1, read2, name, outdir, threads):
 
 if __name__ == '__main__':
     pbrazi =  argparse.ArgumentParser(prog='assembler')
-    pbrazi.add_argument('-f', '--read1', type=str, dest='read1',
+    pbrazi.add_argument('-f', '--read1', type=str, dest='read1', nargs='+'
         help='Input fastq files, read1 followed by read2.')
-    pbrazi.add_argument('-r', '--read2', type=str, dest='read2',
+    pbrazi.add_argument('-r', '--read2', type=str, dest='read2', nargs='+'
         help='Input fastq files, read1 followed by read2.')
+    pbrazi.add_argument('-p', '--pacbio', type=str, dest='pacbio', nargs='+'
+        help='Input pacbio reads.')
     pbrazi.add_argument('-o', '--outdir', type=str, dest='outdir', default=None,
         help='Output directory.')
-    pbrazi.add_argument('-n', '--sample', type=str, dest='name',
+    pbrazi.add_argument('-n', '--sample', type=str, dest='name', default='sample'
         help='Sample name')
     pbrazi.add_argument('-t', '--threads', type=str, dest='threads', default='2',
         help='Number of threads')
@@ -299,5 +342,11 @@ if __name__ == '__main__':
         choices=['test'], help='Sample name')
     pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.5')
     opts = pbrazi.parse_args()
+    if opts.mode == 'fungal':
+        input_dict = list()
+        threads = str(int(opts.threads)/len(opts.read1))
+        for count, fwd, rev in enumerate(opts.read1, opts.read2):
+            input_dict.append([fwd, rev, opts.pacbio, '{0}{1}'.format(opts.name,count), opts.outdir, threads]
+        fungalAssemble(input_dict)
     if opts.mode == 'test':
-        unitTest(opts.read1, opts.read2, opts.name, opts.outdir, opts.threads)
+        unitTest(opts.read1[0], opts.read2[0], opts.pacbio[0], opts.name, opts.outdir, opts.threads)
