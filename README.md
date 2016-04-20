@@ -1,8 +1,8 @@
-# PBrazi genome assembler and evaluator
+# Plasmodium genome assembler and evaluator
 
 The assembler project is designed to perform all the logical steps of a genome
 assembly project, from preprocessing to comparative analysis. The pipeline was
-built to document the process of genome assembly for P.malarie genome project.
+built to document the process of genome assembly for viral genomes.
 The assembly pipeline defaults to the best parameters we found through extensively
 testing and optimizing each tool, to achieve the best assembly for our sequencing
 runs. The evaluation pipeline, in vision, would allow you to automate the process
