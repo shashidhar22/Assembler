@@ -19,14 +19,21 @@ This sections will go through the setup steps for each of the software used
 within this pipeline. This setup procedure will try to install all the software
 to the local library, but some system modules may need super user privileges.
 
-1. AbySS:
+1. Setup local path:
+
+  ```{sh}
+  mkdir local
+  export PATH=/full/path/to/local:$PATH
+  ```
+
+2. AbySS:
 
   1. OpenMPI:
   ```{sh}
   wget https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.2.tar.gz
   tar -zxvf openmpi-1.10.2.tar.gz
   cd openmpi-1.10.2
-  ./configure --prefix=~/local
+  ./configure --prefix=/full/path/to/local
   make all install
   ```
   2. Boost:
@@ -34,7 +41,7 @@ to the local library, but some system modules may need super user privileges.
   wget "http://downloads.sourceforge.net/project/boost/boost/1.60.0/boost_1_60_0.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fboost%2F%3Fsource%3Dtyp_redirect&ts=1458155252&use_mirror=iweb" -O boost_1_60_0.zip
   unzip boost_1_60_0.zip
   cd boost_1_60_0
-  ./bootstrap.sh --prefix=~/local
+  ./bootstrap.sh --prefix=/full/path/to/local
   ./b2 install
   ```
 
@@ -42,21 +49,31 @@ to the local library, but some system modules may need super user privileges.
   ```{sh}
   git clone https://github.com/sparsehash/sparsehash.git
   cd sparsehash
-  ./configure --prefix=~/local
+  ./configure --prefix=/full/path/to/local
   make
   make install
   ```
-  4. AbySS:
+  
+  4. Sqlite3:
+  ```{sh}
+  wget https://www.sqlite.org/2016/sqlite-autoconf-3120200.tar.gz
+  cd  sqlite-autoconf-3120200
+  ./configure --prefix=/full/path/to/local
+  make
+  make install
+  ``` 
+
+  5. AbySS:
   ```{sh}
   wget https://github.com/bcgsc/abyss/releases/download/1.9.0/abyss-1.9.0.tar.gz
   tar -zxvf abyss-1.9.0.tar.gz
   cd abyss-1.9.0
-  ./configure --prefix=~/local --with-boost=~/local/include/ --with-mpi=~/local/lib/openmpi
+  ./configure --prefix=/full/path/to/local --with-boost=/full/path/to/local/include/ --with-mpi=/full/path/to/local/lib/openmpi CPPFLAGS=-I/full/path/to/local/include --enable-maxk=128 --with-sqlite=/home/shashi/local
   make
   make install
   ```
 
-2. Spades:
+3. Spades:
 
   1. Gcc:
   ```{sh}
@@ -66,7 +83,7 @@ to the local library, but some system modules may need super user privileges.
   cd ..
   mkdir objdir
   cd objdir
-  ./configure --prefix=~/local --enable-languages=c,c++,fortran,go --disable-multilib
+  ./configure --prefix=/full/path/to/local --enable-languages=c,c++,fortran,go --disable-multilib
   make
   make install
   ```
@@ -75,21 +92,37 @@ to the local library, but some system modules may need super user privileges.
   wget https://cmake.org/files/v3.5/cmake-3.5.0.tar.gz
   tar -zxvf cmake-3.5.0.tar.gz
   cd cmake-3.5.0
-  ./bootstrap --prefix=~/local
+  ./bootstrap --prefix=/full/path/to/local
   make
   make install
   ```
-  2. Spades:
+  3. Spades:
   ```{sh}
    wget http://spades.bioinf.spbau.ru/release3.7.1/SPAdes-3.7.1.tar.gz
    tar -zxvf SPAdes-3.7.1.tar.gz
    cd SPAdes-3.7.1
-   PREFIX=~/local ./spades_compile.sh
+   PREFIX=/full/path/to/local ./spades_compile.sh
   ```
-3. NGOPT:
+4. NGOPT:
   1. NGOPT:
   ```{sh}
   wget https://sourceforge.net/projects/ngopt/files/a5_miseq_linux_20150522.tar.gz/download
   tar -zxvf download
-  export PATH=$PATH:~/a5_miseq_linux_20150522/bin
+  export PATH=$PATH:/full/path/to/a5_miseq_linux_20150522/bin
+  ```
+
+5. PandaSeq:
+  1. Prerequisites:
+  ```{sh}
+  sudo apt-get install build-essential libtool automake zlib1g-dev libbz2-dev pkg-config
+  ```
+
+  2. Pandaseq:
+  ```{sh}
+  git clone https://github.com/neufeld/pandaseq.git
+  cd  pandaseq
+  ./autogen.sh
+  ./configure --prefix=/full/path/to/local
+  make
+  make install
   ```
