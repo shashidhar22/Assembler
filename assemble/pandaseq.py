@@ -45,15 +45,15 @@ class PandaSeq:
         #Prepare run commands
         logger.write('Pandaseq  started\n')
         #Setup pandaseq command
-        pcmd = [panda_path, '-f', self.read1,'-r', self.read2, '-w',
-            self.outdir, self.param]
+        pcmd = [self.panda_path, '-f', self.read1,'-r', self.read2, '-w',
+            self.result] + self.params
         logger.write('Running Pandaseq with the following command\n')
         logger.write('{0}\n'.format(' '.join(pcmd)))
 
 
         #Running pandaseq
-        prun = subprocess.Popen(' '.join(pcmd), stdout=runlogger,
-            stderr=runlogger, shell=True)
+        prun = subprocess.Popen(pcmd, stdout=runlogger,
+            stderr=runlogger, shell=False)
     
         #Capture stdout and stderr
         plog = prun.communicate()
@@ -62,7 +62,7 @@ class PandaSeq:
         runlogger.close()
 
         if prun.returncode != 0 :
-            logger.write('Pandaseq failed with exit code : {0}; Check runtime log for details.\n'.format(arun.returncode))
+            logger.write('Pandaseq failed with exit code : {0}; Check runtime log for details.\n'.format(prun.returncode))
             logger.close()
             return(prun.returncode)
         else:

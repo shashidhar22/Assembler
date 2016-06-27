@@ -17,7 +17,7 @@ from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 
-class Spades:
+class SpadesHybrid:
     def __init__(self, spades_path, read1, read2, pacbio, outdir, kmers, threads ):
         #Initialize values and create output directories
         self.spades_path = spades_path
@@ -52,7 +52,7 @@ class Spades:
 
 
         #Running Spades
-        srun = subprocess.Popen(srun, stdout=runlogger,
+        srun = subprocess.Popen(scmd, stdout=runlogger,
             stderr=runlogger, shell=False)
         #Capture stdout and stderr
         slog = srun.communicate()

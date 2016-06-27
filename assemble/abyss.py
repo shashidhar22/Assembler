@@ -46,7 +46,7 @@ class Abyss:
         abyss_param = 'k={0}'.format(self.klen)
         aoutpath = 'name={0}/sample'.format(self.outdir)
         inpath = 'in=\'{0} {1}\''.format(self.read1, self.read2)
-        acmd = [abyss_path, aoutpath, inpath, abyss_param]
+        acmd = [self.abyss_path, aoutpath, inpath, abyss_param]
         logger.write('Running AbySS with the following command\n')
         logger.write('{0}\n'.format(' '.join(acmd)))
 

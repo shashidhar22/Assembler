@@ -43,14 +43,14 @@ class Spades:
 
         #Prepare run commands
         logger.write('SPAdes  started\n')
-        scmd = [spades_path, '--pe1-1', self.read1, '--pe1-2', self.read2,
+        scmd = [self.spades_path, '--pe1-1', self.read1, '--pe1-2', self.read2,
             '-o', self.outdir, '--careful', '-k', self.kmers]
         logger.write('Running SPAdes with the following command\n')
         logger.write('{0}\n'.format(' '.join(scmd)))
 
 
         #Running Spades
-        srun = subprocess.Popen(srun, stdout=runlogger,
+        srun = subprocess.Popen(scmd, stdout=runlogger,
             stderr=runlogger, shell=False)
         #Capture stdout and stderr
         slog = srun.communicate()

@@ -25,7 +25,6 @@ class Ngopt:
         self.read2 = os.path.abspath(read2)
         self.outdir = '{0}/ngopt'.format(os.path.abspath(outdir))
         self.threads = threads
-        self.klen = klen
         self.name = name
         self.log = '{0}/ngopt.log'.format(self.outdir)
         self.runtime = '{0}/ngopt_runtime.log'.format(self.outdir)
@@ -47,12 +46,12 @@ class Ngopt:
         logger.write('Changing working directory to : {0}'.format(self.outdir))
         os.chdir(self.outdir)
 
-        ncmd = [ngopt_path, self.read1, self.read2, noutpath] + ngopt_param
+        ncmd = [self.ngopt_path, self.read1, self.read2, './'] 
         logger.write('Running NGOPT with the following command\n')
         logger.write('{0}\n'.format(' '.join(ncmd)))
-
+        print(ncmd)
         #Run NGOPT 
-        nrun = subprocess.Popen(cmd, stdout=runlogger,
+        nrun = subprocess.Popen(ncmd, stdout=runlogger,
             stderr=runlogger)
 
         #Capture stdout and stderr
