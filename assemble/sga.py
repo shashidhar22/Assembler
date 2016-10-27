@@ -17,25 +17,26 @@ from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 
+logger = logging.getLogger('Assembler')
 class Sga:
-    def __init__(self, sga_path, read1, read2, outdir, name, correct, overlap, assemble, threads):
+    def __init__(self, sga_path, read1, read2, outdir,  sga_param, threads):
+        logger = logging.getLogger('Assembler')
         #Initialize values and create output directories
+        sga_param = sga_param.split(',')
         self.sga_path = sga_path
         self.read1 = os.path.abspath(read1)
         self.read2 = os.path.abspath(read2)
         self.outdir = '{0}/sga'.format(os.path.abspath(outdir))
         self.threads = threads
-        self.name = name
-        self.log = '{0}/sga.log'.format(self.outdir)
-        self.runtime = '{0}/sga_runtime.log'.format(self.outdir)
+        self.name = sga_param[0]
         self.preprocess = '{0}/{1}.fastq'.format(self.outdir, self.name)
         self.index = '{0}/{1}'.format(self.outdir, self.name)
-        self.ckmer = correct
+        self.ckmer = sga_param[1]
         self.correct = '{0}/{1}.ec.fastq'.format(self.outdir, self.name)
         self.filter = '{0}/{1}.filter.pass.fastq'.format(self.outdir, self.name)
         self.overlap = '{0}/{1}.ec.filter.pass.asqg.gz'.format(self.outdir, self.name)
-        self.okmer = overlap
-        self.akmer = assemble
+        self.okmer = sga_param[2]
+        self.akmer = sga_param[3]
         self.assemble = '{0}/{1}'.format(self.outdir, self.name)
         self.results = '{0}/{1}-contigs.fa'.format(self.outdir, self.name)
         if not os.path.exists(self.outdir):
@@ -47,35 +48,32 @@ class Sga:
         '''Run SGA pre processing'''
         #Start logging
         start = timeit.default_timer()
-        runlogger = open(self.runtime, 'w')
-        logger = open(self.log, 'w')
 
         #Prepare preprocess commands
-        logger.write('SGA pipeline started\n')
+        logger.info('SGA pipeline started')
         ppcmd = [self.sga_path, 'preprocess', '-p', '1', self.read1, self.read2,
             '-o', self.preprocess]
-        logger.write('Running SGA preprocess with the following command\n')
-        logger.write('{0}\n'.format(' '.join(ppcmd)))
+        logger.debug('Running SGA preprocess with the following command')
+        logger.debug('{0}'.format(' '.join(ppcmd)))
         
         #Run SGA pre processing
-        pprun = subprocess.Popen(ppcmd, stdout=runlogger,
-            stderr=runlogger, shell=False)
+        pprun = subprocess.Popen(ppcmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
 
         #Capture stdout and stderr
         pplog = pprun.communicate()
         elapsed = timeit.default_timer() - start
-        runlogger.write('\nSGA preprocessing runtime logs:\n')
-        runlogger.flush()
-        runlogger.close()
+        for logs in pplog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)
 
         if pprun.returncode != 0:
-            logger.write('SGA preprocessing failed with exit code : {0}; Check runtime log for details.\n'.format(pprun.returncode))
-            logger.close()
+            logger.error('SGA preprocessing failed with exit code : {0}; Check runtime log for details.'.format(pprun.returncode))
             return(pprun.returncode)
         else:
-            logger.write('SGA preprocessing completed successfully; Runtime : {0}\n'.format(elapsed))
-            logger.write('Preprocessed fastq file can be found at : {0}'.format(self.preprocess))
-            logger.close()
+            logger.debug('SGA preprocessing completed successfully; Runtime : {0}'.format(elapsed))
+            logger.debug('Preprocessed fastq file can be found at : {0}'.format(self.preprocess))
             return(pprun.returncode)
 
 
@@ -83,149 +81,139 @@ class Sga:
         '''Run SGA index'''
         #Start logging
         start = timeit.default_timer()
-        runlogger = open(self.runtime, 'a')
-        logger = open(self.log, 'a')
 
         #Prepare index commands
-        logger.write('SGA index started\n')
+        logger.info('SGA index started')
         if os.path.exists(self.correct):
-            icmd = [self.sga_path, 'index', '-t', self.threads, '-a', 'ropebwt', '-p',
+            icmd = [self.sga_path, 'index', '-t', self.threads, '-p',
                 self.index, self.correct]
         else:
-            icmd = [self.sga_path, 'index', '-t', self.threads, '-a', 'ropebwt', '-p',
+            icmd = [self.sga_path, 'index', '-t', self.threads, '-p',
                 self.index, self.preprocess]
-        logger.write('Running SGA index with the following command\n')
-        logger.write('{0}\n'.format(' '.join(icmd)))
+        logger.info('Running SGA index with the following command')
+        logger.info('{0}'.format(' '.join(icmd)))
 
         #Run SGA index
-        irun = subprocess.Popen(icmd, stdout=runlogger,
-            stderr=runlogger, shell=False)
+        irun = subprocess.Popen(icmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
 
         #Capture stdout and stderr
         ilog = irun.communicate()
         elapsed = timeit.default_timer() - start
-        runlogger.write('\nSGA index runtime logs:\n')
-        runlogger.flush()
-        runlogger.close()
+        
+        for logs in ilog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)
 
         if irun.returncode != 0:
-            logger.write('SGA index failed with exit code : {0}; Check runtime log for details.\n'.format(irun.returncode))
-            logger.close()
+            logger.error('SGA index failed with exit code : {0}; Check runtime log for details.'.format(irun.returncode))
             return(irun.returncode)
         else:
-            logger.write('SGA index completed successfully; Runtime : {0}\n'.format(elapsed))
-            logger.write('Index file can be found at : {0}'.format(self.index))
-            logger.close()
+            logger.debug('SGA index completed successfully; Runtime : {0}'.format(elapsed))
+            logger.debug('Index file can be found at : {0}'.format(self.index))
             return(irun.returncode)
 
     def sgaCorrect(self):
         '''Run SGA Correct'''
         #Start logging
         start = timeit.default_timer()
-        runlogger = open(self.runtime, 'a')
-        logger = open(self.log, 'a')
 
         #Prepare correction commands
-        logger.write('SGA correct started\n')
+        logger.info('SGA correct started')
         ccmd = [self.sga_path, 'correct', '-t', self.threads, '-k', str(self.ckmer), '--learn',
             '-p', self.index, '-o', self.correct, self.preprocess]
-        logger.write('Running SGA correct with the following command\n')
-        logger.write('{0}\n'.format(' '.join(ccmd)))
+        logger.debug('Running SGA correct with the following command')
+        logger.debug('{0}'.format(' '.join(ccmd)))
 
         #Run SGA correct
-        crun = subprocess.Popen(ccmd, stdout=runlogger,
-            stderr=runlogger, shell=False)
+        crun = subprocess.Popen(ccmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         clog = crun.communicate()
         elapsed = timeit.default_timer() - start
-        runlogger.write('\nSGA correct runtime logs:\n')
-        runlogger.flush()
-        runlogger.close()
+
+        for logs in clog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)
 
         if crun.returncode != 0:
-            logger.write('SGA correct failed with exit code : {0}; Check runtime log for details.\n'.format(crun.returncode))
-            logger.close()
+            logger.error('SGA correct failed with exit code : {0}; Check runtime log for details.'.format(crun.returncode))
             return(crun.returncode)
         else:
-            logger.write('SGA correct completed successfully; Runtime : {0}\n'.format(elapsed))
-            logger.write('Corrected fastq file can be found at : {0}'.format(self.correct))
-            logger.close()
+            logger.info('SGA correct completed successfully; Runtime : {0}'.format(elapsed))
+            logger.info('Corrected fastq file can be found at : {0}'.format(self.correct))
             return(crun.returncode)
 
     def sgaFilter(self):
         '''Run SGA Filter'''
         #Start logging
         start = timeit.default_timer()
-        runlogger = open(self.runtime, 'a')
-        logger = open(self.log, 'a')
 
         #Prepare filter commands
-        logger.write('SGA filter started\n')
+        logger.info('SGA filter started')
         fcmd = [self.sga_path, 'filter', '-x', '2', '-t', self.threads, '-p', self.index,
                 '-o', self.filter, self.correct]
-        logger.write('Running SGA filter with the following command\n')
-        logger.write('{0}\n'.format(' '.join(fcmd)))
+        logger.debug('Running SGA filter with the following command')
+        logger.debug('{0}'.format(' '.join(fcmd)))
 
         #Run SGA filter
-        frun = subprocess.Popen(fcmd, stdout=runlogger,
-            stderr=runlogger, shell=False)
+        frun = subprocess.Popen(fcmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         flog = frun.communicate()
         elapsed = timeit.default_timer() - start
-        runlogger.write('\nSGA filter runtime logs:\n')
-        runlogger.flush()
-        runlogger.close()
+
+        for logs in flog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)
 
         if frun.returncode != 0:
-            logger.write('SGA filter failed with exit code : {0}; Check runtime log for details.\n'.format(frun.returncode))
-            logger.close()
+            logger.error('SGA filter failed with exit code : {0}; Check runtime log for details'.format(frun.returncode))
             return(frun.returncode)
         else:
-            logger.write('SGA filter  completed successfully; Runtime : {0}\n'.format(elapsed))
-            logger.write('Filtered fastq file can be found at : {0}'.format(self.filter))
-            logger.close()
+            logger.info('SGA filter completed successfully; Runtime : {0}'.format(elapsed))
+            logger.info('Filtered fastq file can be found at : {0}'.format(self.filter))
             return(frun.returncode)
 
     def sgaOverlap(self):
         '''Run SGA Overlap'''
         #Start logging
         start = timeit.default_timer()
-        runlogger = open(self.runtime, 'a')
-        logger = open(self.log, 'a')
 
         #Prepare overlap commands
-        logger.write('SGA overlap started\n')
+        logger.info('SGA overlap started')
         ocmd = [self.sga_path, 'overlap', '-m', str(self.okmer), '-t', self.threads, '-o',
                     self.overlap, '-p', self.index, self.filter]
-        logger.write('Running SGA overlap with the following command\n')
-        logger.write('{0}\n'.format(' '.join(ocmd)))
+        logger.info('Running SGA overlap with the following command')
+        logger.info('{0}'.format(' '.join(ocmd)))
 
         #Run SGA overlap
-        orun = subprocess.Popen(ocmd, stdout=runlogger,
-            stderr=runlogger, shell=False)
+        orun = subprocess.Popen(ocmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
         #Capture stdout and stderr
         olog = orun.communicate()
         elapsed = timeit.default_timer() - start
-        runlogger.write('\nSGA overlap runtime logs:\n')
-        runlogger.flush()
-        runlogger.close()
+
+        for logs in olog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)
 
         if orun.returncode != 0:
-            logger.write('SGA overlap failed with exit code : {0}; Check runtime log for details.\n'.format(orun.returncode))
-            logger.close()
+            logger.error('SGA overlap failed with exit code : {0}; Check runtime log for details'.format(orun.returncode))
             return(orun.returncode)
         else:
-            logger.write('SGA overlap completed successfully; Runtime : {0}\n'.format(elapsed))
-            logger.write('Overlap graph file can be found at : {0}'.format(self.overlap))
-            logger.close()
+            logger.info('SGA overlap completed successfully; Runtime : {0}'.format(elapsed))
+            logger.info('Overlap graph file can be found at : {0}'.format(self.overlap))
             return(orun.returncode)
 
     def sgaAssemble(self):
         '''Run SGA Assemble'''
         #Start logging
         start = timeit.default_timer()
-        runlogger = open(self.runtime, 'a')
-        logger = open(self.log, 'a')
 
         #Prepare assemble commands
         logger.write('SGA assemble started\n')
@@ -241,15 +229,50 @@ class Sga:
         alog = arun.communicate()
         elapsed = timeit.default_timer() - start
         runlogger.write('\nSGA assemble runtime logs:\n')
-        runlogger.flush()
-        runlogger.close()
+
+        for logs in alog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)
 
         if arun.returncode != 0:
-            logger.write('SGA assemble failed with exit code : {0}; Check runtime log for details.\n'.format(arun.returncode))
-            logger.close()
+            logger.error('SGA assemble failed with exit code : {0}; Check runtime log for details'.format(arun.returncode))
             return(arun.returncode)
         else:
-            logger.write('SGA assemble completed successfully; Runtime : {0}\n'.format(elapsed))
-            logger.write('Assemble contig file can be found at : {0}'.format(self.results))
-            logger.close()
+            logger.info('SGA assemble completed successfully; Runtime : {0}'.format(elapsed))
+            logger.info('Assemble contig file can be found at : {0}'.format(self.results))
             return(arun.returncode)
+
+    def sgaRun(self):
+        '''Run SGA assembly pipeline'''
+        #Call pre process
+        ret = self.sgaPreProcess()
+        if ret != 0:
+            return(ret)
+
+        #call index
+        ret = self.sgaIndex()
+        if ret != 0:
+            return(ret)
+
+        #call correction
+        ret = self.sgaCorrect()
+        if ret != 0:
+            return(ret)
+
+        #call index
+        ret = self.sgaIndex()
+        if ret != 0:
+            return(ret)
+
+        #call filter
+        ret = self.sgaFilter()
+        if ret != 0:
+            return(ret)
+
+        #call overlap
+        ret = self.sgaCorrect()
+        if ret != 0:
+            return(ret)
+
+        return(ret)

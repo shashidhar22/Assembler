@@ -14,7 +14,9 @@ import collections
 from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
+from multiprocessing import Process
 from collections import defaultdict
+from collections import OrderedDict
 from assemble.abyss import Abyss
 from assemble.spades import Spades
 from assemble.ngopt import Ngopt
@@ -26,341 +28,262 @@ from assemble.canu import Canu
 from assemble.cleaner import Cleaner
 from assemble.evaluate import Evaluate
 
-def alignAssembly(bowtie_path, sam_path, jelly_path, read1, read2, pacbio, assembly, outdir, threads, names, xml):
-    if assembly:
-        for fasta, method in zip(assembly, names):
-            logging.info('Aligning reads to assembly : {0}'.format(method))
-            evaluate = Evaluate(bowtie_path, sam_path, jelly_path, read1, read2, None, fasta, outdir, threads, method, None)
-            logging.info('Building index')
-            eret = evaluate.buildIndex()
-            logging.info('Aligning reads')
-            eret = evaluate.alignIllumina()
-            logging.info('Sorting sam file')
-            eret = evaluate.sortBam()
-            logging.info('Indexing bam file')
-            eret = evaluate.indexBam()
-            logging.info('Alignment complete for {0}'.format(method))
-            evaluate.cleanSam()
-    elif xml:
-        for pbassembly in xml:
-            logging.info('Starting PB jelly for : {0}'.format(pbassembly))
-            evaluate = Evaluate(bowtie_path, sam_path, jelly_path, None, None, None, None, outdir, threads, method, pbassembly)
-    return
+#For version 0.9.0 removing all pacbio paramters, this feature will be re introduced for version 0.9.1.
 
-def cleanup(bowtie_path, bbduk_path, read1, read2, pacbio, confile, outdir, threads):
-    cleaner = Cleaner(bowtie_path, bbduk_path, read1, read2, pacbio, confile, outdir, threads)
-    logging.info('Building bowtie index')
-    cret = cleaner.buildIndex()
-    if cret == 0:
-        logging.info("Bowtie index built")
-    else:
-        logging.error("Bowtie index failed")
-        sys.exit()
+def illumina(values):
+    assembly = values[0]
+    assembler_path = values[1]
+    read_one = values[2]
+    read_two = values[3]
+    out_path = values[4]
+    assembler_param = values[5]
+    threads = values[6]
     
-    logging.info("Removing contaminants from illumina reads")
-    cret = cleaner.deconIllumina()
-    if cret == 0:
-        logging.info("Contaminants removed from illumina reads")
-    else:
-        logging.error("Bowtie failed on illumina reads")
-        sys.exit()
+    if assembly == 'Spades':
+        assembler = Spades(assembler_path, read_one, read_two, out_path, assembler_param, threads)
+        retcode = assembler.spades()
+        contigs = assembler.result
 
-    cleaner.cleanSam()
+    elif  assembly == 'Sga':
+        assembler = Sga(assembler_path, read_one, read_two, out_path, assembler_param, threads)
+        retcode = assembler.sgaRun()
+        contigs = assembler.result
+    elif assembly == 'Ngopt':
+        assembler = Ngopt(assembler_path, read_one, read_two, out_path, assembler_param, threads)
+        retcode = assembler.ngopt()
+        contigs = assembler.result
+    elif assembly == 'PandaSeq':
+        assembler = PandaSeq(assembler_path, read_one, read_two, out_path, threads)
+        retcode = assembler.pandaseq()
+        contigs = assembler.result
+        
+    elif assembly == 'Abyss':
+        assembler = Abyss(assembler_path, out_path, threads)
+        retcode = assembler.abyss(read_one, read_two, assembler_param)
+        contigs = assembler.result
 
-    logging.info("Removing contaminants from pacbio reads")
-    cret = cleaner.deconPacbio()
-    if cret == 0:
-        logging.info("Contaminants removed from pacbio reads")
-    else:
-        logging.error("Bowtie failed on pacbio reads")
-        sys.exit()
-    cleaner.cleanSam()
-    return
+    return(assembly, retcode, contigs)
 
-def realign(bowtie_path, bbduk_path, read1, read2, confile, outdir, threads):
-    cleaner = Cleaner(bowtie_path, bbduk_path, read1, read2, None, confile, outdir, threads)
-    logging.info('Building bowtie index')
-    cret = cleaner.buildIndex()
-    if cret == 0:
-        logging.info("Bowtie index built")
-    else:
-        logging.error("Bowtie index failed")
-        sys.exit()
+
+
+
+
+def main(bbduk_path, bowtie_path, spades_path, sga_path, ngopt_path, 
+        panda_path, abyss_path, spades_param, sga_param, ngopt_param, abyss_param, 
+        read_one, read_two, ref_path, threads, mode, out_path, adapters):
+
+    #Check if inputs exists
+    read_one = os.path.abspath(read_one)
+    read_two  = os.path.abspath(read_two)
     
-    logging.info("Removing contaminants from illumina reads")
-    cret = cleaner.deconIllumina()
-    if cret == 0:
-        logging.info("Contaminants removed from illumina reads")
-    else:
-        logging.error("Bowtie failed on illumina reads")
-        sys.exit()
+    if not os.path.exists(read_one):
+        raise FileNotFoundException('Illumina fastq file not found at {0}'.format(read_one))
+    if not os.path.exists(read_two):
+        raise FileNotFoundException('Illumina fastq file not found at {0}'.format(read_two))
+
+    #Reintroduce Pacbio checks in version 0.9.1
     
-    logging.info("Sorting to sam files")
-    cret = cleaner.sortBam()
-    if cret == 0:
-        logging.info("Sorting completed")
-    else:
-        logging.error("Sorting failed")
-        sys.exit()
+    #Check for presence of output directory, if not present create one
+    out_path = os.path.abspath(out_path)
+    if not os.path.exists(out_path):
+        os.mkdir(out_path)
 
-    logging.info("Indexing to bam files")
-    cret = cleaner.indexBam()
-    if cret == 0:
-        logging.info("Indexing completed")
-    else:
-        logging.error("Indexing failed")
-        sys.exit()
+    # create logger
+    logger = logging.getLogger('Assembler')
+    logger.setLevel(logging.DEBUG)
 
-    cleaner.cleanSam()
-    return
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
 
-def unitTest(abyss_path, sga_path, spades_path, ngopt_path, panda_path, 
-            blast_path, celera_path, sprai_path, canu_path, bowtie_path, 
-            sam_path, bbduk_path, read1, read2, outdir, abyss_klen, 
-            sga_klen, spades_klen, sample_name, threads, egs, depth, 
-            reference, adapters):
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    #Decontaminate illumina reads
-    logging.info('Decontaminating illumina reads')
-    cleaner = Cleaner(bowtie_path, sam_path, read1, read2, reference, adapters, 
-                    outdir, threads) 
-    logging.info('Building bowtie index')
-    cleaner.buildIndex()
-    logging.info('Aligning illumina reads') 
-    cleaner.deconIllumina()
-    logging.info('Trimming adapter and overrepresented sequences')
-    cleaner.trimIllumina()
-    logging.info('Decontamination of illumina reads completed')
-    read1 = cleaner.tread1
-    read2 = cleaner.tread2
-    cleaner.cleanSam()
-    logging.info('Decontaminated files can be found at : \n {0},{1}'.format(read1, read2))
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+
+    logger.info('Starting assembly pipeline')
+    logger.info('Running the following modes of analysis : {0}'.format(','.join(mode)))
+
+    #Check for mode of operation
+    if 'prepare' in mode:
+        #Get abspath of paramters
+        bowtie_path = os.path.abspath(bowtie_path)  
+        bbduk_path = os.path.abspath(bbduk_path)
+        
+        #Check for correctness of path
+        if not os.path.exists(bowtie_path):
+            raise FileNotFoundError('Bowtie2 not found at {0}'.format(bowtie_path))
+        if not os.path.exists(bbduk_path):
+            raise FileNotFoundError('BBDuk not found at {0}'.format(bbduk_path))
+
+        #Create cleanup output path
+        prep_out_path = '{0}/Prepare'.format(out_path)
+        if not os.path.exists(prep_out_path):
+            os.mkdir(prep_out_path)
+
+        #Start cleaner
+        cleaner = Cleaner(bowtie_path, bbduk_path, prep_out_path, threads)
+        status, btindex = cleaner.buildIndex(ref_path)
+        if status != 0:
+            logger.error('Exiting assembler')
+            sys.exit()
+        #Remove contamination
+        status, cread_one, cread_two, cread_sam = cleaner.deconIllumina(read_one, read_two, 
+                                                                    btindex)
+        if status != 0:
+            logger.error('Exiting assembler') 
+            sys.exit()
     
+        #Trim reads
+        status, read_one, read_two = cleaner.trimIllumina(cread_one, cread_two,
+                                                        adapters)
+        if status != 0:
+            logger.error('Exiting assembler')
+            sys.exit()
 
-    #AbySS call
-    logging.info('Starting AbySS')
-    abyss = Abyss(abyss_path, read1, read2, outdir, abyss_klen, threads)
-    aret = abyss.abyss() 
-    if aret != 0:
-        logging.error("AbySS failed with returncode {0}; Check abyss log for further details : {1}; Exiting pipeline".format(aret, abyss.log))
-        sys.exit()
-    else:
-        logging.info("AbySS completed sucessfully")
+        #Clean your directory young man
+        cleaner.cleanSam(cread_sam)
 
-    #SGA call
-    sga_klen = sga_klen.split(",")
-    correct = sga_klen[0]
-    overlap = sga_klen[1]
-    assemble = sga_klen[2]
-    sret = 0
-    logging.info("Starting SGA")
-    sga = Sga(sga_path, read1, read2, outdir, sample_name, correct, overlap, assemble, threads) 
-    logging.info("Starting SGA preprocess")
-    sret = sga.sgaPreProcess()
-    if sret != 0:
-        logging.error("SGA pre precess failed with returncode {0}; Check sga log for further details : {1}; Exiting pipeline".format(sret, sga.log))
-        sys.exit()
-    else:
-        logging.info('SGA pre process completed sucessfully')
+    if 'illumina' in mode:
+        #Get abspath of parameters
+        spades_path = os.path.abspath(spades_path)
+        sga_path = os.path.abspath(sga_path)
+        ngopt_path = os.path.abspath(ngopt_path)
+        panda_path = os.path.abspath(panda_path)
+        abyss_path = os.path.abspath(abyss_path)
 
-    logging.info("Starting SGA index")
-    sret = sga.sgaIndex()
-    if sret != 0:
-        logging.error("SGA index failed with returncode {0}; Check sga log for further details : {1}; Exiting pipeline".format(sret, sga.log))
-        sys.exit()
-    else:
-        logging.info("SGA index completed sucessfully")
+        #Initialize variable:
+        results = OrderedDict()
 
-    logging.info("Starting SGA correct")
-    sret = sga.sgaCorrect()
-    if sret != 0:
-        logging.error("SGA correct failed with returncode {0}; Check sga log for further details : {1}; Exiting pipeline".format(sret, sga.log))
-        sys.exit()
-    else:
-        logging.info("SGA correct completed sucessfully")
-    
-    logging.info("Starting SGA index")
-    sret = sga.sgaIndex()
-    if sret != 0:
-        logging.error("SGA index failed with returncode {0}; Check sga log for further details : {1}; Exiting pipeline".format(sret, sga.log))
-        sys.exit()
-    else:
-        logging.info("SGA index comepleted sucessfully")
+        #Check for correctness of path
+        if not os.path.exists(spades_path):
+            raise FileNotFoundError('SPAdes not found at {0}'.format(spades_path))
+        if not os.path.exists(sga_path):
+            raise FileNotFoundError('SGA not found at {0}'.format(sga_path))
+        if not os.path.exists(ngopt_path):
+            raise FileNotFoundError('NGOPT not found at {0}'.format(ngopt_path))
+        if not os.path.exists(panda_path):
+            raise FileNotFoundError('PandaSeq not found at {0}'.format(panda_path))
+        if not os.path.exists(abyss_path):
+            raise FileNotFoundError('ABySS not found at {0}'.format(abyss_path))
 
-    logging.info("Starting SGA filter")
-    sret = sga.sgaFilter()
-    if sret != 0:
-        logging.error("SGA filter failed with returncode {0}; Check sga log for further details : {1}; Exiting pipeline".format(sret, sga.log))
-        sys.exit()
-    else:
-        logging.info("SGA filter failed")
+        #Create cleanup output path
+        ilmn_out_path = '{0}/Illumina'.format(out_path)
+        if not os.path.exists(ilmn_out_path):
+            os.mkdir(ilmn_out_path)
 
-    logging.info("Starting SGA overlap")
-    sret = sga.sgaOverlap()
-    if sret != 0:
-        logging.error("SGA overlap failed with returncode {0}; Check sga log for further details : {1}; Exiting pipeline".format(sret, sga.log))
-        sys.exit()
-    else:
-        logging.info("SGA overlap completed sucessfully")
+        #Create pool of assembly processes
+        #Restricting to 2 parallel process, this needs to opened up
+        assembly_pool = Pool(processes=2)
+        assemblers = ['Spades','Sga','Ngopt','PandaSeq','Abyss']
+        assembler_path = [spades_path, sga_path, ngopt_path, panda_path, abyss_path]
+        assembler_params = [spades_param, sga_param, ngopt_param, None, abyss_param]
+        assembly_result = assembly_pool.map(illumina, zip(assemblers, assembler_path, repeat(read_one),
+                                    repeat(read_two), repeat(ilmn_out_path), assembler_params,
+                                    repeat(threads)))
 
-    logging.info("Starting SGA assemble")
-    sret = sga.sgaAssemble()
-    if sret != 0:
-        logging.error("SGA assembly failed with returncode {0}; Check sga log for further details : {1}; Exiting pipeline".format(sret, sga.log))
-        sys.exit()
-    else:
-        logging.info("SGA assembly comepleted sucessfully")
+        #Check if assemblies ran to completions, and add them to result dictionary
+        for assembly, retcode, result in assembly_result:
+            if retcode:
+                raise RuntimeError('Exiting Assembler')
+            else:
+                results[assembly] = result
 
-    logging.info("SGA pipeline completed sucessfully")
-
-    #Spades call
-    logging.info("SPAdes assembly started")
-    spades = Spades(spades_path, read1, read2, outdir, spades_klen, threads)
-    spret = spades.spades()
-    spret = 0 
-    if spret != 0:
-        logging.error("SPAdes assembly failed with returncode {0}; Check spades log for further details : {1}; Exiting pipeline".format(spret, spades.log))
-        sys.exit()
-    else:
-        logging.info("SPAdes assembly completed sucessfully")
-
-    #Ngopt call
-    logging.info("NGOPT assembly started")
-    ngopt = Ngopt(ngopt_path, read1, read2, outdir, sample_name, threads)
-    nret = ngopt.ngopt()
-    if nret != 0:
-        logging.error("NGOPT assembly failed with returncode {0}; Check NGOPT log for further details : {1}; Exiting pipeline".format(nret, ngopt.log))
-        sys.exit()
-    else:
-        logging.info("NGOPT assembly completed sucessfully")
-    
-    #PandaSeq call
-    logging.info("PandaSeq assembly started")   
-    panda = PandaSeq(panda_path, read1, read2, outdir, threads)
-    pret = panda.pandaseq()
-    if pret != 0:
-        logging.error("PandaSeq assembly failed with returncode {0}; Check PandaSeq log for further details : {1}; Exiting pipeline".format(pret, panda.log))
-        sys.exit() 
-    else:
-        logging.info("PandaSeq assembly completed sucessfully")
-
-    #Spades hybrid assembly
-    logging.info("Spades hybrid assembly started")
-    spades = SpadesHybrid(spades_path, read1, read2, pacbio, outdir, kmers, threads)
-    spret = spades.spades()
-    if spret != 0:
-        logging.error("SPAdes hybrid assembly failed with returncode {0}; Check spades log for further details : {1}; Exiting pipeline".format(spret, spades.log))
-        sys.exit()
-    else:
-        logging.info("SPAdes hybrid assembly completed sucessfully")
-
-    #Sprai call
-    logging.info("Sprai assembly started")
-    sprai = Sprai(sprai_path, celera_path, blast_path, pacbio, outdir, threads, egs, depth)
-    logging.info("Writing down specifications")
-    sprai.ecconfig
-    sprai.pacbio
-    logging.info("Starting assembly")
-    sret = sprai.sprai()
-    if sret != 0:
-        logging.error("Sprai assembly failed with returncode {0}; Check Sprai log for further details : {1}; Exiting pipeline".format(sret, sprai.log))
-        sys.exit() 
-    else:
-        logging.info("Sprai assembly completed sucessfully")
-
-    #Canu call
-    logging.info("Canu assembly started")
-    canu = Canu(canu_path, pacbio, outdir, threads, egs, depth, name)
-    canu.pbconfig()
-    cret = canu.canu()
-    if cret != 0:
-        logging.error("Canu assembly failed with returncode {0}; Check Canu log for further details : {1}; Exiting pipeline".format(cret, canu.log))
-        sys.exit() 
-    else:
-        logging.info("Canu assembly completed sucessfully")
-    
-    return
+        print(results)
+        return 
 
 if __name__ == '__main__':
+    #Setup logger
     FORMAT = '%(asctime)-15s : %(levelname)-8s :  %(message)s'
-    logging.basicConfig(format=FORMAT, level=logging.DEBUG)
-    logging.info("Started assembly pipeline")
-    pbrazi =  argparse.ArgumentParser(prog='assembler')
-    pbrazi.add_argument('-f', '--read1', type=str, dest='read1', nargs='+',
+    logger = logging.getLogger('Nutcracker')
+    logger.setLevel(logging.DEBUG)
+    pbrazi =  argparse.ArgumentParser(prog='Nutcracker')
+    mandatory = pbrazi.add_argument_group('Basic Configuration')
+    mandatory.add_argument('-f', '--read1', type=str, dest='read1', nargs='+',
         help='Input fastq files, read1 followed by read2.')
-    pbrazi.add_argument('-r', '--read2', type=str, dest='read2', nargs='+',
+    mandatory.add_argument('-r', '--read2', type=str, dest='read2', nargs='+',
         help='Input fastq files, read1 followed by read2.')
-    pbrazi.add_argument('-p', '--pacbio', type=str, dest='pacbio', nargs='+',
+    mandatory.add_argument('-p', '--pacbio', type=str, dest='pacbio', nargs='+',
         help='Input pacbio reads.')
-    pbrazi.add_argument('-o', '--outdir', type=str, dest='outdir', default=None,
+    mandatory.add_argument('-o', '--outdir', type=str, dest='out_path', default=None,
         help='Output directory.')
-    pbrazi.add_argument('-n', '--sample', type=str, dest='name', nargs='+',
+    mandatory.add_argument('-n', '--sample', type=str, dest='name', nargs='+',
         help='Sample name')
-    pbrazi.add_argument('-a', '--assembly', type=str, dest='assembly', nargs='+',
-        help='Assembly file')
-    pbrazi.add_argument('-t', '--threads', type=str, dest='threads', default='2',
+    mandatory.add_argument('-R', '--reference', type=str, dest='ref_path', 
+        help='Reference fasta file.')
+    mandatory.add_argument('-t', '--threads', type=str, dest='threads', default='2',
         help='Number of threads')
-    pbrazi.add_argument('-x', '--xml', type=str, dest='xml', nargs='+',
-        help='Sample PB Jelly xml file')
-    pbrazi.add_argument('--spades', type=str, dest='spades_path',
-        help='Path to spades', default='spades.py')
-    pbrazi.add_argument('--sga', type=str, dest='sga_path',
-        help='Path to sga', default='sga')
-    pbrazi.add_argument('--abyss', type=str, dest='abyss_path',
-        help='Path to abyss.', default='abyss-pe')
-    pbrazi.add_argument('--ngopt', type=str, dest='ngopt_path',
-        help='Path to ngopt', default='ngopt')
-    pbrazi.add_argument('--pandaseq', type=str, dest='panda_path',
-        help='Path to pandaseq', default='pandaseq')
-    pbrazi.add_argument('--sprai', type=str, dest='sprai_path',
-        help='Path to sprai', default='sprai')
-    pbrazi.add_argument('--blast', type=str, dest='blast_path',
-        help='Path to blastn', default='blastn')
-    pbrazi.add_argument('--celera', type=str, dest='celera_path',
-        help='Path to celera assembler', default='celera')
-    pbrazi.add_argument('--canu', type=str, dest='canu_path',
-        help='Path to canu', default='canu')
-    pbrazi.add_argument('--bowtie', type=str, dest='bowtie_path',
-        help='Path to bowtie', default='bowtie2')
-    pbrazi.add_argument('--sam', type=str, dest='sam_path',
-        help='Path to samtools', default='samtools')
-    pbrazi.add_argument('--jelly', type=str, dest='jelly_path',
+    mandatory.add_argument('-m', '--mode', type=str, dest='mode', nargs='+',
+        choices=['prepare', 'illumina'], help='Sample name')
+    mandatory.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.6')
+    jelly = pbrazi.add_argument_group('PBJelly arguments')
+    jelly.add_argument('--jelly', type=str, dest='jelly_path',
         help='Path to PBJelly', default='Jelly.py')
-    pbrazi.add_argument('--bbduk', type=str, dest='bbduk_path',
-        help='Path to bbduk', default='bbduk')
-    pbrazi.add_argument('--abyss_kmers', type=str, dest='abyss_klen',
-        help='Kmer length for AbySS assembly', default='63')
-    pbrazi.add_argument('--sga_kmers', type=str, dest='sga_klen',
-        help='Kmer length for SGA assembly', default='41,75,71')
-    pbrazi.add_argument('--spaeds_kmers', type=str, dest='spades_klen', 
+    jelly.add_argument('-a', '--assembly', type=str, dest='assembly', nargs='+',
+        help='Assembly file')
+    jelly.add_argument('-x', '--xml', type=str, dest='xml', nargs='+',
+        help='Sample PB Jelly xml file')
+    spades = pbrazi.add_argument_group('Spades arguments')
+    spades.add_argument('--spades', type=str, dest='spades_path',
+        help='Path to spades', default='spades.py')
+    spades.add_argument('--spades_kmers', type=str, dest='spades_param', 
         help='Kmer length for Spades assembly', default='27,49,71,93,115,127')
-    pbrazi.add_argument('--genome_size', type=str, dest='egs', 
-        help='Estimated genome size', default='30m')
-    pbrazi.add_argument('--pacbio_depth', type=int, dest='depth',
-        help='Estimated depth of sequencing for pacbio read (if unknown set to 0)', default=0)
-    pbrazi.add_argument('--contaminant', type=str, dest='confile',
+    sga = pbrazi.add_argument_group('SGA arguments')
+    sga.add_argument('--sga', type=str, dest='sga_path',
+        help='Path to sga', default='sga')
+    sga.add_argument('--sga_kmers', type=str, dest='sga_param',
+        help='Kmer length for SGA assembly', default='41,75,71')
+    abyss = pbrazi.add_argument_group('AbySS argumetns')
+    abyss.add_argument('--abyss', type=str, dest='abyss_path',
+        help='Path to abyss.', default='abyss-pe')
+    abyss.add_argument('--abyss_kmers', type=str, dest='abyss_param',
+        help='Kmer length for AbySS assembly', default='63')
+    ngopt = pbrazi.add_argument_group('NGOPT arguments')
+    ngopt.add_argument('--ngopt', type=str, dest='ngopt_path',
+        help='Path to ngopt', default='ngopt')
+    ngopt.add_argument('--ngopt_param', type=str, dest='ngopt_param',
+        help='Output prefix for NGOPT', default='sample')
+    panda = pbrazi.add_argument_group('PandaSeq arguments')
+    panda.add_argument('--pandaseq', type=str, dest='panda_path',
+        help='Path to pandaseq', default='pandaseq')
+    sprai = pbrazi.add_argument_group('Sprai arguments')
+    sprai.add_argument('--sprai', type=str, dest='sprai_path',
+        help='Path to sprai', default='sprai')
+    blast = pbrazi.add_argument_group('Blast arguments')
+    blast.add_argument('--blast', type=str, dest='blast_path',
+        help='Path to blastn', default='blastn')
+    celera = pbrazi.add_argument_group('Celera arguments')
+    celera.add_argument('--celera', type=str, dest='celera_path',
+        help='Path to celera assembler', default='celera')
+    canu = pbrazi.add_argument_group('Canu arguments')
+    canu.add_argument('--canu', type=str, dest='canu_path',
+        help='Path to canu', default='canu')
+    bowtie = pbrazi.add_argument_group('Bowtie arguments')
+    bowtie.add_argument('--bowtie', type=str, dest='bowtie_path',
+        help='Path to bowtie', default='bowtie2')
+    samtools = pbrazi.add_argument_group('Samtools arguments')
+    samtools.add_argument('--sam', type=str, dest='sam_path',
+        help='Path to samtools', default='samtools')
+    bbduk = pbrazi.add_argument_group('BBDuk arguments')
+    bbduk.add_argument('--bbduk', type=str, dest='bbduk_path',
+        help='Path to bbduk', default='bbduk')
+    bbduk.add_argument('--contaminant', type=str, dest='confile',
         help='Path to contaminant reference fasta file')
-    pbrazi.add_argument('--adapters', type=str, dest='adapters', nargs='+',
+    bbduk.add_argument('--adapters', type=str, dest='adapters', nargs='+',
         help='Path to adapter and overrepresented sequence fasta file')
-    pbrazi.add_argument('-m', '--mode', type=str, dest='mode',
-        choices=['test', 'cleanup', 'realign', 'evaluate'], help='Sample name')
-    pbrazi.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.6')
+    pacbio = pbrazi.add_argument_group('PacBio assembly arguments')
+    pacbio.add_argument('--genome_size', type=str, dest='egs', 
+        help='Estimated genome size', default='30m')
+    pacbio.add_argument('--pacbio_depth', type=int, dest='depth',
+        help='Estimated depth of sequencing for pacbio read (if unknown set to 0)', default=0)
     opts = pbrazi.parse_args()
-    if not os.path.exists(opts.outdir):
-        os.mkdir(opts.outdir)
-    if opts.mod=`=jedi=3, e == 'test':=`= (abyss_path, sga_path, spades_path, ngopt_path, panda_path, blast_path, celera_path, sprai_path, canu_path, bowtie_path, sam_path, bbduk_path, read1, read2, outdir, abyss_klen, sga_klen, spades_klen, sample_name, threads, egs, depth, *_*reference*_*, adapters) =`=jedi=`=' '
-        unitTest(opts.abyss_path, opts.sga_path, opts.spades_path, opts.ngopt_path, opts.panda_path,
-                opts.blast_path, opts.celera_path, opts.sprai_path, opts.canu_path, 
-                opts.bowtie_path, opts.sam_path, opts.bbduk_path
-                opts.read1[0], opts.read2[0], opts.outdir, opts.abyss_klen, 
-                opts.sga_klen, opts.spades_klen, opts.name, opts.threads, opts.egs,
-                opts.depth, opts.confile, opts.adapters)
 
-    if opts.mode == 'cleanup':
-        cleanup(opts.bowtie_path, opts.bbduk_path, opts.read1[0], opts.read2[0], opts.pacbio[0], opts.confile, opts.outdir, opts.threads)
-    
-    if opts.mode == 'realign':
-        realign(opts.bowtie_path, opts.bbduk_path, opts.read1[0], opts.read2[0], opts.confile, opts.outdir, opts.threads)
+    main(opts.bbduk_path, opts.bowtie_path, opts.spades_path, opts.sga_path, opts.ngopt_path,
+        opts.panda_path, opts.abyss_path, opts.spades_param, opts.sga_param, opts.ngopt_param,
+        opts.abyss_param, opts.read1[0], opts.read2[0], opts.ref_path,
+        opts.threads, opts.mode, opts.out_path, opts.adapters)
 
-    if opts.mode == 'evaluate':
-        alignAssembly(opts.bowtie_path, opts.sam_path, opts.jelly_path, opts.read1[0], opts.read2[0], None, opts.assembly, opts.outdir, opts.threads, opts.name, None)

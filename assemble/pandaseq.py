@@ -18,6 +18,7 @@ from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 
+logger = logging.getLogger('Assembler')
 class PandaSeq:
     def __init__(self, panda_path, read1, read2, outdir, threads ):
         #Initialize values and create output directories
@@ -39,34 +40,33 @@ class PandaSeq:
         '''Run PandaSeq on sample'''
         #Start logging
         start = timeit.default_timer() 
-        runlogger = open(self.runtime, 'w')
-        logger = open(self.log, 'w')
 
         #Prepare run commands
-        logger.write('Pandaseq  started\n')
+        logger.info('Pandaseq  started\n')
         #Setup pandaseq command
         pcmd = [self.panda_path, '-f', self.read1,'-r', self.read2, '-w',
             self.result] + self.params
-        logger.write('Running Pandaseq with the following command\n')
-        logger.write('{0}\n'.format(' '.join(pcmd)))
+        logger.info('Running Pandaseq with the following command')
+        logger.info('{0}'.format(' '.join(pcmd)))
 
 
         #Running pandaseq
-        prun = subprocess.Popen(pcmd, stdout=runlogger,
-            stderr=runlogger, shell=False)
+        prun = subprocess.Popen(pcmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, shell=False)
     
         #Capture stdout and stderr
         plog = prun.communicate()
         elapsed = timeit.default_timer() - start
-        runlogger.flush()
-        runlogger.close()
+        
+        for logs in plog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)
 
         if prun.returncode != 0 :
-            logger.write('Pandaseq failed with exit code : {0}; Check runtime log for details.\n'.format(prun.returncode))
-            logger.close()
+            logger.error('Pandaseq failed with exit code : {0}; Check runtime log for details'.format(prun.returncode))
             return(prun.returncode)
         else:
-            logger.write('Pandaseq completed successfully; Runtime : {0}\n'.format(elapsed))
-            logger.write('Contigs can be found in : {0}'.format(self.result))
-            logger.close()
+            logger.info('Pandaseq completed successfully; Runtime : {0}'.format(elapsed))
+            logger.info('Contigs can be found in : {0}'.format(self.result))
             return(prun.returncode)
