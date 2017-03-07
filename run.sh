@@ -1,0 +1,1 @@
+python3.4 assembler.py -f fq/test.1.fastq -r fq/test.2.fastq -p fq/test_pacbio.fastq -o local/ -n brazilianum  -R ~/data/malaria/rawData/hostgenome/Sailbol.fa -t 3 -m illumina --spades ~/tools/SPAdes-3.9.0-Linux/bin/spades.py --sga ~/local/bin/sga --abyss ~/local/bin/abyss-pe --ngopt ~/tools/a5_miseq_linux_20150522/bin/a5_pipeline.pl --pandaseq ~/tools/fermi/run-fermi.pl

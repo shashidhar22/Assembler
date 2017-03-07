@@ -1,6 +1,7 @@
 import os
 import sys
 import csv
+import gzip
 import time
 import logging
 from collections import namedtuple
@@ -44,23 +45,32 @@ class Fastq:
         return(maskedseq, quals)
         
     def read(self):
-        fqhandle = open(self.fastq, 'r')
+        if '.gz' in self.fastq or '.fastqgz' in self.fastq :
+            fqhandle = gzip.open(self.fastq, 'rb')
+        else:            
+            fqhandle = open(self.fastq, 'r')
         Record = namedtuple('Record',['header', 'sheader', 'seq', 'quals'])
         lineno = 0
         while True:
             try:
                 #Get fastq record
-                header = next(fqhandle).strip()
-                lineno
-                seq = [base for base in next(fqhandle).strip()]
-                sheader = next(fqhandle).strip()
-                quals = [self.phreddict[int(ord(qual))] for qual in next(fqhandle).strip()]
+                if '.gz' in self.fastq or '.fastqgz' in self.fastq:
+                    header = str(next(fqhandle),'utf-8').strip()
+                    seq = [base for base in str(next(fqhandle),'utf-8').strip()]
+                    sheader = str(next(fqhandle), 'utf-8').strip()
+                    quals = str(next(fqhandle), 'utf-8').strip()
+                else:
+                    header = next(fqhandle).strip()
+                    seq = [base for base in next(fqhandle).strip()]
+                    sheader = next(fqhandle).strip()
+                    quals = next(fqhandle).strip()
+                #quals = [self.phreddict[int(ord(str(qual)))] for qual in next(fqhandle).strip()]
                 lineno += 1
             
                 #Check if record adheres to fastq format
                 check = self.formatChecker(header, seq, sheader, quals, lineno, self.phred)
                 if check == 1:
-                    logging.error('Invalid header in fastq read ; record number : {1}'.format(lineno))
+                    logging.error('Invalid header in fastq read ; record number : {0}'.format(lineno))
                     raise NameError('Invalid header in fastq read; record number : {0}'.format(lineno))
                 if check == 2:
                     logging.error('Invalid secondary header in fastq read ; record number : {1}'.format(lineno))
@@ -88,35 +98,4 @@ class Fastq:
 
 
 
-class Pileup:
-    #Class to parse the pileup format and extract relevant information
-    
-    def __init__(self, pileupfile, outdir):
-        self.pileup = pileupfile
-        self.outdir = outdir
-        FORMAT = '%(asctime)-15s : %(levelname)-8s :  %(message)s'
-        logging.basicConfig(format=FORMAT)
-
-    def getAlt(self, alt, qual):
-        alt = list()
-        altdir = list()
-        altevi = dict()
-        altqual = list()
-        for base in alt:
-            if base == '.' or base == ',':
-                al
-                
-        
-    def read(self):
-        phandle = open(self.pileup)
-        Baseinfo = namedtuple("Baseinfo", ['scaf', 'pos', 'ref', 'cov', 'alt', 'altdir', 'altevi', 'altqual'])
-        while True:
-            try:
-                lines = lines.split('\t').strip()
-                scaf = lines[0]
-                pos = lines[1]
-                ref = lines[2]
-                cov = lines[3]
-                alt = lines[4]
-                qual = lines[5]
             

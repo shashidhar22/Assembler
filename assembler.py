@@ -1,4 +1,5 @@
 import os
+import timeit
 import re
 import csv
 import sys
@@ -26,40 +27,43 @@ from assemble.sprai import Sprai
 from assemble.spades_pacbio import SpadesHybrid
 from assemble.canu import Canu
 from assemble.cleaner import Cleaner
-from assemble.evaluate import Evaluate
-
+from assemble.fermi import Fermi
+from assemble.prepinputs import main
 #For version 0.9.0 removing all pacbio paramters, this feature will be re introduced for version 0.9.1.
 
 def illumina(values):
     assembly = values[0]
     assembler_path = values[1]
-    read_one = values[2]
-    read_two = values[3]
-    out_path = values[4]
-    assembler_param = values[5]
-    threads = values[6]
-    
+    config = values[2]
+    out_path = values[3]
+    assembler_param = values[4]
+    threads = values[5]
+    retcode = 0
+    contigs = None
     if assembly == 'Spades':
-        assembler = Spades(assembler_path, read_one, read_two, out_path, assembler_param, threads)
+        print(assembler_path, config, assembler_param, out_path, threads)
+        assembler = Spades(assembler_path, config, assembler_param, out_path, threads)
         retcode = assembler.spades()
         contigs = assembler.result
 
     elif  assembly == 'Sga':
-        assembler = Sga(assembler_path, read_one, read_two, out_path, assembler_param, threads)
+        print(assembler_path, config, assembler_param, out_path, threads)
+        assembler = Sga(assembler_path, config, assembler_param, out_path, threads)
         retcode = assembler.sgaRun()
+        contigs = assembler.results
+#    elif assembly == 'Ngopt':
+#        assembler = Ngopt(assembler_path, config, assembler_param, out_path, threads)
+#        retcode = assembler.ngopt()
+#        contigs = assembler.result
+    elif assembly == 'Fermi':
+        print(assembler_path, config, assembler_param, out_path, threads)
+        assembler = Fermi(assembler_path, config, assembler_param, out_path, threads)
+        retcode = assembler.fermi()
         contigs = assembler.result
-    elif assembly == 'Ngopt':
-        assembler = Ngopt(assembler_path, read_one, read_two, out_path, assembler_param, threads)
-        retcode = assembler.ngopt()
-        contigs = assembler.result
-    elif assembly == 'PandaSeq':
-        assembler = PandaSeq(assembler_path, read_one, read_two, out_path, threads)
-        retcode = assembler.pandaseq()
-        contigs = assembler.result
-        
     elif assembly == 'Abyss':
-        assembler = Abyss(assembler_path, out_path, threads)
-        retcode = assembler.abyss(read_one, read_two, assembler_param)
+        print(assembler_path, config, assembler_param, out_path, threads)
+        assembler = Abyss(assembler_path, config, assembler_param, out_path, threads)
+        retcode = assembler.abyss()
         contigs = assembler.result
 
     return(assembly, retcode, contigs)
@@ -68,21 +72,23 @@ def illumina(values):
 
 
 
-def main(bbduk_path, bowtie_path, spades_path, sga_path, ngopt_path, 
-        panda_path, abyss_path, spades_param, sga_param, ngopt_param, abyss_param, 
-        read_one, read_two, ref_path, threads, mode, out_path, adapters):
+def test(bbduk_path, bowtie_path, spades_path, sga_path, ngopt_path, 
+        fermi_path, abyss_path, spades_param, sga_param, ngopt_param, 
+        fermi_param, abyss_param, input_path, ref_path, threads, mode,
+        out_path, adapters, name):
 
     #Check if inputs exists
-    read_one = os.path.abspath(read_one)
-    read_two  = os.path.abspath(read_two)
-    
-    if not os.path.exists(read_one):
-        raise FileNotFoundException('Illumina fastq file not found at {0}'.format(read_one))
-    if not os.path.exists(read_two):
-        raise FileNotFoundException('Illumina fastq file not found at {0}'.format(read_two))
-
-    #Reintroduce Pacbio checks in version 0.9.1
-    
+    config = input_path
+    print(config)
+#    for lines in input_config:
+#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
+#        lines = lines.split(', ')
+#        if lines[0] == 'Sample':
+#            continue
+#        else:
+#            files = glob.glob(lines[3])
+#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
+#
     #Check for presence of output directory, if not present create one
     out_path = os.path.abspath(out_path)
     if not os.path.exists(out_path):
@@ -132,28 +138,32 @@ def main(bbduk_path, bowtie_path, spades_path, sga_path, ngopt_path,
             logger.error('Exiting assembler')
             sys.exit()
         #Remove contamination
-        status, cread_one, cread_two, cread_sam = cleaner.deconIllumina(read_one, read_two, 
-                                                                    btindex)
-        if status != 0:
-            logger.error('Exiting assembler') 
-            sys.exit()
+        for samples in config:
+            read_one = config[samples][0]
+            read_two = config[samples][1]
+            status, cread_one, cread_two, cread_sam = cleaner.deconIllumina(read_one, read_two, 
+                btindex)
+            if status != 0:
+                logger.error('Exiting assembler') 
+                sys.exit()
     
-        #Trim reads
-        status, read_one, read_two = cleaner.trimIllumina(cread_one, cread_two,
+            #Trim reads
+            status, read_one, read_two = cleaner.trimIllumina(cread_one, cread_two,
                                                         adapters)
-        if status != 0:
-            logger.error('Exiting assembler')
-            sys.exit()
+            if status != 0:
+                logger.error('Exiting assembler')
+                sys.exit()
 
-        #Clean your directory young man
-        cleaner.cleanSam(cread_sam)
+            #Clean your directory young man
+            cleaner.cleanSam(cread_sam)
+            config[samples][0] = cread_one
+            config[samples][1] = cread_two
 
     if 'illumina' in mode:
         #Get abspath of parameters
         spades_path = os.path.abspath(spades_path)
         sga_path = os.path.abspath(sga_path)
-        ngopt_path = os.path.abspath(ngopt_path)
-        panda_path = os.path.abspath(panda_path)
+        fermi_path = os.path.abspath(fermi_path)
         abyss_path = os.path.abspath(abyss_path)
 
         #Initialize variable:
@@ -164,10 +174,10 @@ def main(bbduk_path, bowtie_path, spades_path, sga_path, ngopt_path,
             raise FileNotFoundError('SPAdes not found at {0}'.format(spades_path))
         if not os.path.exists(sga_path):
             raise FileNotFoundError('SGA not found at {0}'.format(sga_path))
-        if not os.path.exists(ngopt_path):
-            raise FileNotFoundError('NGOPT not found at {0}'.format(ngopt_path))
-        if not os.path.exists(panda_path):
-            raise FileNotFoundError('PandaSeq not found at {0}'.format(panda_path))
+#        if not os.path.exists(ngopt_path):
+#            raise FileNotFoundError('NGOPT not found at {0}'.format(ngopt_path))
+        if not os.path.exists(fermi_path):
+            raise FileNotFoundError('PandaSeq not found at {0}'.format(fermi_path))
         if not os.path.exists(abyss_path):
             raise FileNotFoundError('ABySS not found at {0}'.format(abyss_path))
 
@@ -178,13 +188,14 @@ def main(bbduk_path, bowtie_path, spades_path, sga_path, ngopt_path,
 
         #Create pool of assembly processes
         #Restricting to 2 parallel process, this needs to opened up
+        panda_param =  '/projects/home/sravishankar9/tools/fermi/fermi'
         assembly_pool = Pool(processes=2)
-        assemblers = ['Spades','Sga','Ngopt','PandaSeq','Abyss']
-        assembler_path = [spades_path, sga_path, ngopt_path, panda_path, abyss_path]
-        assembler_params = [spades_param, sga_param, ngopt_param, None, abyss_param]
-        assembly_result = assembly_pool.map(illumina, zip(assemblers, assembler_path, repeat(read_one),
-                                    repeat(read_two), repeat(ilmn_out_path), assembler_params,
-                                    repeat(threads)))
+        assemblers = ['Spades','Sga','Fermi','Abyss']
+        assembler_path = [spades_path, sga_path, fermi_path, abyss_path]
+        assembler_params = [spades_param, sga_param, fermi_param, 
+                            abyss_param]
+        assembly_result = assembly_pool.map(illumina, zip(assemblers, assembler_path, repeat(config),
+                                    repeat(ilmn_out_path), assembler_params, repeat(threads)))
 
         #Check if assemblies ran to completions, and add them to result dictionary
         for assembly, retcode, result in assembly_result:
@@ -203,12 +214,8 @@ if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     pbrazi =  argparse.ArgumentParser(prog='Nutcracker')
     mandatory = pbrazi.add_argument_group('Basic Configuration')
-    mandatory.add_argument('-f', '--read1', type=str, dest='read1', nargs='+',
-        help='Input fastq files, read1 followed by read2.')
-    mandatory.add_argument('-r', '--read2', type=str, dest='read2', nargs='+',
-        help='Input fastq files, read1 followed by read2.')
-    mandatory.add_argument('-p', '--pacbio', type=str, dest='pacbio', nargs='+',
-        help='Input pacbio reads.')
+    mandatory.add_argument('-i', '--input', type=str, dest='input_path', default=None,
+        help='Path to input folder.')                           
     mandatory.add_argument('-o', '--outdir', type=str, dest='out_path', default=None,
         help='Output directory.')
     mandatory.add_argument('-n', '--sample', type=str, dest='name', nargs='+',
@@ -220,13 +227,6 @@ if __name__ == '__main__':
     mandatory.add_argument('-m', '--mode', type=str, dest='mode', nargs='+',
         choices=['prepare', 'illumina'], help='Sample name')
     mandatory.add_argument('-v', '--version', action='version', version='%(prog)s 0.9.6')
-    jelly = pbrazi.add_argument_group('PBJelly arguments')
-    jelly.add_argument('--jelly', type=str, dest='jelly_path',
-        help='Path to PBJelly', default='Jelly.py')
-    jelly.add_argument('-a', '--assembly', type=str, dest='assembly', nargs='+',
-        help='Assembly file')
-    jelly.add_argument('-x', '--xml', type=str, dest='xml', nargs='+',
-        help='Sample PB Jelly xml file')
     spades = pbrazi.add_argument_group('Spades arguments')
     spades.add_argument('--spades', type=str, dest='spades_path',
         help='Path to spades', default='spades.py')
@@ -247,21 +247,11 @@ if __name__ == '__main__':
         help='Path to ngopt', default='ngopt')
     ngopt.add_argument('--ngopt_param', type=str, dest='ngopt_param',
         help='Output prefix for NGOPT', default='sample')
-    panda = pbrazi.add_argument_group('PandaSeq arguments')
-    panda.add_argument('--pandaseq', type=str, dest='panda_path',
-        help='Path to pandaseq', default='pandaseq')
-    sprai = pbrazi.add_argument_group('Sprai arguments')
-    sprai.add_argument('--sprai', type=str, dest='sprai_path',
-        help='Path to sprai', default='sprai')
-    blast = pbrazi.add_argument_group('Blast arguments')
-    blast.add_argument('--blast', type=str, dest='blast_path',
-        help='Path to blastn', default='blastn')
-    celera = pbrazi.add_argument_group('Celera arguments')
-    celera.add_argument('--celera', type=str, dest='celera_path',
-        help='Path to celera assembler', default='celera')
-    canu = pbrazi.add_argument_group('Canu arguments')
-    canu.add_argument('--canu', type=str, dest='canu_path',
-        help='Path to canu', default='canu')
+    fermi = pbrazi.add_argument_group('Fermi arguments')
+    fermi.add_argument('--fermi', type=str, dest='fermi_path',
+        help='Path to Fermi wrapper', default='runfermi.pl')
+    fermi.add_argument('--fermi_param', type=str, dest='fermi_param',
+        help='Path to Fermi exec', default='fermi')                       
     bowtie = pbrazi.add_argument_group('Bowtie arguments')
     bowtie.add_argument('--bowtie', type=str, dest='bowtie_path',
         help='Path to bowtie', default='bowtie2')
@@ -275,15 +265,12 @@ if __name__ == '__main__':
         help='Path to contaminant reference fasta file')
     bbduk.add_argument('--adapters', type=str, dest='adapters', nargs='+',
         help='Path to adapter and overrepresented sequence fasta file')
-    pacbio = pbrazi.add_argument_group('PacBio assembly arguments')
-    pacbio.add_argument('--genome_size', type=str, dest='egs', 
-        help='Estimated genome size', default='30m')
-    pacbio.add_argument('--pacbio_depth', type=int, dest='depth',
-        help='Estimated depth of sequencing for pacbio read (if unknown set to 0)', default=0)
     opts = pbrazi.parse_args()
 
-    main(opts.bbduk_path, opts.bowtie_path, opts.spades_path, opts.sga_path, opts.ngopt_path,
-        opts.panda_path, opts.abyss_path, opts.spades_param, opts.sga_param, opts.ngopt_param,
-        opts.abyss_param, opts.read1[0], opts.read2[0], opts.ref_path,
-        opts.threads, opts.mode, opts.out_path, opts.adapters)
+    config = main(opts.input_path)
+    print(config)
+    test(opts.bbduk_path, opts.bowtie_path, opts.spades_path, opts.sga_path, opts.ngopt_path,
+        opts.fermi_path, opts.abyss_path, opts.spades_param, opts.sga_param, opts.ngopt_param,
+        opts.fermi_param, opts.abyss_param, config , opts.ref_path,
+        opts.threads, opts.mode, opts.out_path, opts.adapters, opts.name)
 

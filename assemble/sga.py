@@ -16,32 +16,53 @@ from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
+from collections import namedtuple
+from assemble.readers import Fastq
+from assemble.prepinputs import main
 
 logger = logging.getLogger('Assembler')
 class Sga:
-    def __init__(self, sga_path, read1, read2, outdir,  sga_param, threads):
+    def __init__(self, sga_path, config, sga_param, out_path, threads):
         logger = logging.getLogger('Assembler')
         #Initialize values and create output directories
         sga_param = sga_param.split(',')
+        self.name = 'sample'
         self.sga_path = sga_path
-        self.read1 = os.path.abspath(read1)
-        self.read2 = os.path.abspath(read2)
-        self.outdir = '{0}/sga'.format(os.path.abspath(outdir))
+        self.config = config
+        self.out_path = '{0}/sga'.format(os.path.abspath(out_path))
         self.threads = threads
-        self.name = sga_param[0]
-        self.preprocess = '{0}/{1}.fastq'.format(self.outdir, self.name)
-        self.index = '{0}/{1}'.format(self.outdir, self.name)
-        self.ckmer = sga_param[1]
-        self.correct = '{0}/{1}.ec.fastq'.format(self.outdir, self.name)
-        self.filter = '{0}/{1}.filter.pass.fastq'.format(self.outdir, self.name)
-        self.overlap = '{0}/{1}.ec.filter.pass.asqg.gz'.format(self.outdir, self.name)
-        self.okmer = sga_param[2]
-        self.akmer = sga_param[3]
-        self.assemble = '{0}/{1}'.format(self.outdir, self.name)
-        self.results = '{0}/{1}-contigs.fa'.format(self.outdir, self.name)
-        if not os.path.exists(self.outdir):
-            os.mkdir(self.outdir)
+        self.preprocess = '{0}/{1}.fastq'.format(self.out_path, self.name)
+        self.index = '{0}/{1}'.format(self.out_path, self.name)
+        self.ckmer = sga_param[0]
+        self.correct = '{0}/{1}.ec.fastq'.format(self.out_path, self.name)
+        self.filter = '{0}/{1}.filter.pass.fastq'.format(self.out_path, self.name)
+        self.overlap = '{0}/{1}.ec.filter.pass.asqg.gz'.format(self.out_path, self.name)
+        self.okmer = sga_param[1]
+        self.akmer = sga_param[2]
+        self.assemble = '{0}/{1}'.format(self.out_path, self.name)
+        self.results = '{0}/{1}-contigs.fa'.format(self.out_path, self.name)
+        if not os.path.exists(self.out_path):
+            os.mkdir(self.out_path)
 
+        return
+
+    def prepInp(self):
+        merge_fastq_rone = '{0}/{1}_r1.fastq'.format(self.out_path, self.name)
+        merge_fastq_rtwo = '{0}/{1}_r2.fastq'.format(self.out_path, self.name)
+        rones = open(merge_fastq_rone, 'a')
+        rtwos = open(merge_fastq_rtwo, 'a')
+        for samples in self.config:
+            if self.config[samples].paired and self.config[samples].prep == 'Short':
+                print(samples)
+                frone = Fastq(self.config[samples].files[0], './', 'phred33')
+                frtwo = Fastq(self.config[samples].files[1], './', 'phred33')
+                for rone, rtwo in zip(frone.read(), frtwo.read()):
+                    rones.write('{0}\n{1}\n{2}\n{3}\n'.format(rone.header, rone.seq, rone.sheader, rone.quals))
+                    rtwos.write('{0}\n{1}\n{2}\n{3}\n'.format(rtwo.header, rtwo.seq, rtwo.sheader, rtwo.quals))
+        rones.close()
+        rtwos.close()
+        self.rone = merge_fastq_rone
+        self.rtwo = merge_fastq_rtwo
         return
 
     def sgaPreProcess(self):
@@ -51,7 +72,7 @@ class Sga:
 
         #Prepare preprocess commands
         logger.info('SGA pipeline started')
-        ppcmd = [self.sga_path, 'preprocess', '-p', '1', self.read1, self.read2,
+        ppcmd = [self.sga_path, 'preprocess', '-p', '1', self.rone, self.rtwo,
             '-o', self.preprocess]
         logger.debug('Running SGA preprocess with the following command')
         logger.debug('{0}'.format(' '.join(ppcmd)))
@@ -64,7 +85,7 @@ class Sga:
         pplog = pprun.communicate()
         elapsed = timeit.default_timer() - start
         for logs in pplog:
-            log = logs.decode('utf-8').split('\n')
+            log = logs.decode('utf-8', errors='ignore').split('\n')
             for lines in log:
                 logger.debug(lines)
 
@@ -245,6 +266,9 @@ class Sga:
 
     def sgaRun(self):
         '''Run SGA assembly pipeline'''
+        #Prep inputs
+        self.prepInp()
+
         #Call pre process
         ret = self.sgaPreProcess()
         if ret != 0:
@@ -271,8 +295,76 @@ class Sga:
             return(ret)
 
         #call overlap
-        ret = self.sgaCorrect()
+        ret = self.sgaOverlap()
         if ret != 0:
             return(ret)
 
+        #call assemble
+        ret = self.sgaAssemble()
+        if ret != 0:
+            return(ret)
+        
         return(ret)
+
+if __name__ == '__main__':
+    
+    #Define defaults
+    sga_default = '/projects/home/sravishankar9/local/bin/sga'
+    config = '/projects/home/sravishankar9/projects/Assembler/fq/test.config'
+    out_path = '/projects/home/sravishankar9/projects/Assembler/local/'
+    params = '41,71,75'
+    threads = '4'
+    # create logger
+    FORMAT = '%{asctime}-15s : %{levelname}-8s : %{message}s'
+    logger = logging.getLogger('Assembler')
+    logger.setLevel(logging.DEBUG)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+
+    logger.info('Starting assembly pipeline')
+    logger.info('Running the following modes of analysis : SGA')
+
+    sga_params = argparse.ArgumentParser(prog="SGA runner")
+    sga_params.add_argument('--sga', type=str, default=sga_default,
+                              help='Path to SGA executable')
+    sga_params.add_argument('--config', type=str, default=config,
+                              help='Path to input config file')
+    sga_params.add_argument('--out_path', type=str, dest='out_path',
+                              default=out_path,
+                              help='Path to output directory')
+    sga_params.add_argument('--params', type=str, default=params,
+                              help='SGA k-mer size')
+    sga_params.add_argument('--threads', type=str, default=threads,
+                              help='Number of threads allocated')
+
+    sopts = sga_params.parse_args() 
+    config = main(sopts.config)
+#    input_config = open(sopts.config)
+#    config = dict()
+#    for lines in input_config:
+#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
+#        lines = lines.strip().split(', ')
+#        if lines[0] == 'Samples':
+#            continue
+#        else:
+#            files = glob.glob(lines[2])
+#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
+#
+    assembler = Sga(sopts.sga, config,
+                              sopts.params, sopts.out_path, sopts.threads)
+    sret = assembler.sgaRun()
+    contigs = assembler.results
+    print(sret)
+    print(contigs)
+

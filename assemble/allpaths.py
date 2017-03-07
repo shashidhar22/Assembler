@@ -16,16 +16,15 @@ from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
-from collections import namedtuple
-from assemble.prepinputs import main
 
 logger = logging.getLogger('Assembler')
 class Spades:
-    def __init__(self, spades_path, config, kmers, out_path, threads ):
+    def __init__(self, spades_path, rone, rtwo, kmers, out_path, threads ):
         logger = logging.getLogger('Assembler')
         #Initialize values and create output directories
         self.spades_path = spades_path
-        self.config = config
+        self.rone = os.path.abspath(rone)
+        self.rtwo = os.path.abspath(rtwo)
         self.out_path = '{0}/spades'.format(os.path.abspath(out_path))
         self.threads = threads
         self.kmers = kmers
@@ -37,28 +36,6 @@ class Spades:
 
         return
 
-    def prepInp(self):
-        scmd = [self.spades_path]
-        jump = 0
-        mate = 0
-        single = 0
-        pacbio = 0
-        for samples in self.config:
-            if self.config[samples].prep == 'Short' and self.config[samples].paired:
-                jump += 1
-                for count, files in enumerate(self.config[samples].files, start=1):
-                    scmd += ['--pe{0}-{1}'.format(jump, count), files]
-            elif (self.config[samples].prep == 'Single' or self.config[samples].prep == 'Long') and (not self.config[samples].paired):
-                single += 1
-                scmd += ['--s{0}'.format(single), self.config[samples].files[0]]
-            elif self.config[samples].prep == 'Short' and self.config[samples].paired:
-                mate += 1
-                for count, files in enumerate(self.config[samples].files, start=1):
-                    scmd += ['--mp{0}-{1}'.format(mate, count), files]
-
-        scmd += ['-o', self.out_path, '--careful', '-k', self.kmers]
-        return(scmd)
-
     def spades(self):
         '''Run Spades on sample'''
         #Start logging
@@ -66,7 +43,8 @@ class Spades:
 
         #Prepare run commands
         logger.info('SPAdes  started\n')
-        scmd = self.prepInp()
+        scmd = [self.spades_path, '--pe1-1', self.rone, '--pe1-2', self.rtwo,
+            '-o', self.out_path, '--careful', '-k', self.kmers]
         logger.debug('Running SPAdes with the following command\n')
         logger.debug('{0}\n'.format(' '.join(scmd)))
 
@@ -94,7 +72,8 @@ if __name__ == '__main__':
     
     #Define defaults
     spades_default = '/projects/home/sravishankar9/tools/SPAdes-3.9.0-Linux/bin/spades.py'
-    inputs = '/projects/home/sravishankar9/projects/Assembler/fq/test.config'
+    rone = '/projects/home/sravishankar9/projects/Assembler/fq/test_miseq_r1.fastq'
+    rtwo = '/projects/home/sravishankar9/projects/Assembler/fq/test_miseq_r2.fastq'
     out_path = '/projects/home/sravishankar9/projects/Assembler/local/spades'
     params = '23,49,71,93,115,127'
     threads = '4'
@@ -123,8 +102,10 @@ if __name__ == '__main__':
     spades_params = argparse.ArgumentParser(prog="Spades runner")
     spades_params.add_argument('--spades', type=str, default=spades_default,
                               help='Path to Spades executable')
-    spades_params.add_argument('--input', type=str, default=inputs,
-                              help='Path to Inputs config file')
+    spades_params.add_argument('--rone', type=str, default=rone,
+                              help='Path to read one')
+    spades_params.add_argument('--rtwo', type=str, default=rtwo,
+                              help='Path to read two')
     spades_params.add_argument('--outdir', type=str, dest='out_path',
                               default=out_path,
                               help='Path to output directory')
@@ -134,19 +115,7 @@ if __name__ == '__main__':
                               help='Number of threads allocated')
 
     sopts = spades_params.parse_args() 
-#    input_config = open(sopts.input)
-    config = main(sopts.input)
-#        config = dict()
-#    for lines in input_config:
-#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
-#        lines = lines.strip().split(', ')
-#        if lines[0] == 'Samples':
-#            continue
-#        else:
-#            files = glob.glob(lines[2])
-#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
-
-    assembler = Spades(sopts.spades, config,
+    assembler = Spades(sopts.spades, sopts.rone, sopts.rtwo,
                               sopts.params, sopts.out_path, sopts.threads)
     sret = assembler.spades()
     contigs = assembler.result

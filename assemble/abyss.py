@@ -16,22 +16,81 @@ from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
+from collections import namedtuple
+from assemble.prepinputs import main
 
 logger = logging.getLogger('Assembler')
 class Abyss:
-    def __init__(self, abyss_path, outdir, threads ):
+    def __init__(self, abyss_path, config, klen, outdir, threads ):
         #Initialize values and create output directories
         self.abyss_path = abyss_path
-        self.outdir = '{0}/abyss'.format(os.path.abspath(outdir))
+        self.config = config
+        self.klen = klen
+        self.out_path = '{0}/abyss'.format(os.path.abspath(outdir))
         self.threads = threads
-        self.log = '{0}/abyss.log'.format(self.outdir)
-        self.runtime = '{0}/abyss_runtime.log'.format(self.outdir)
-        self.result = '{0}/sample-contigs.fa'.format(self.outdir)
-        if not os.path.exists(self.outdir):
-            os.mkdir(self.outdir)
+        self.log = '{0}/abyss.log'.format(self.out_path)
+        self.runtime = '{0}/abyss_runtime.log'.format(self.out_path)
+        self.result = '{0}/sample-contigs.fa'.format(self.out_path)
+        if not os.path.exists(self.out_path):
+            os.mkdir(self.out_path)
         return
 
-    def abyss(self, read1, read2, klen):
+    def prepInp(self):
+        acmd = [self.abyss_path]
+        jump = 0
+        mate = 0 
+        single = 0
+        pacbio = 0
+        keys = self.config.keys()
+        libs = 'lib=\''
+        mp = 'mp=\''
+        longs = 'long=\''
+        fastq = dict()
+        for samples in keys:
+            if self.config[samples].prep == 'Short' and self.config[samples].paired:
+                jump += 1
+                libs += 'pe{0} '.format(jump)
+                fastq['pe{0}'.format(jump)] = ['pe{0}'.format(jump)] + self.config[samples].files
+            elif self.config[samples].prep == 'Single' and (not self.config[samples].paired):
+                single += 1
+                try:
+                    fastq['se'] = self.config[samples].files[0]
+                except KeyError:
+                    fastq['se'].append(self.config[samples].files[0])
+            elif self.config[samples].prep == 'Long' and (not self.config[samples].paired):
+                pacbio += 1
+                longs += 'long{0} '.format(pacbio)
+                fastq['long{0}'.format(pacbio)] = ['long{0}'.format(pacbio)] + self.config[samples].files
+            elif self.config[samples].prep == 'Mate' and self.config[samples].paired:
+                mate += 1
+                mp += 'mp{0} '.format(mate)
+                fastq['mp{0}'.format(mate)] = ['mp{0}'.format(mate)] + self.config[samples].files
+
+        libs += '\''
+        mp += '\''
+        longs += '\''                                        
+        acmd += ['k={0}'.format(self.klen), 'name={0}/sample'.format(self.out_path)]
+        if libs != 'lib=\'\'':
+            acmd += [libs]
+        if mp != 'mp=\'\'':
+            acmd += [mp]
+        if longs != 'long=\'\'':
+            acmd += [longs]
+
+        for samples in fastq:
+            library = ''
+            for count, entities in enumerate(fastq[samples]):
+                if count == 0:
+                    library += '{0}=\''.format(entities)
+                else:
+                    library += '{0} '.format(entities)
+            library += '\''
+            acmd += [library]
+        return(acmd)
+
+
+
+    def abyss(self):
         '''Run ABySS on sample'''
         #Start logging
         start = timeit.default_timer() 
@@ -39,11 +98,9 @@ class Abyss:
         #Prepare run commands
         logger.info('AbySS  started')
         #Setup abyss command
-        abyss_param = 'k={0}'.format(klen)
-        aoutpath = 'name={0}/sample'.format(self.outdir)
-        inpath = 'in=\'{0} {1}\''.format(read1, read2)
+
         runlogger = open(self.runtime, 'w')
-        acmd = [self.abyss_path, aoutpath, inpath, abyss_param]
+        acmd = self.prepInp()
         logger.info('Running AbySS with the following command')
         logger.info('{0}'.format(' '.join(acmd)))
 
@@ -69,7 +126,15 @@ class Abyss:
 
 
 if __name__ == '__main__':
+    
+    #Define defaults
+    abyss_default = '/projects/home/sravishankar9/tools/abyss/bin/abyss-pe'
+    inputs = '/projects/home/sravishankar9/projects/Assembler/fq/test.config'
+    out_path = '/projects/home/sravishankar9/projects/Assembler/local/abyss'
+    params = 63
+    threads = '4'
     # create logger
+    FORMAT = '%{asctime}-15s : %{levelname}-8s : %{message}s'
     logger = logging.getLogger('Assembler')
     logger.setLevel(logging.DEBUG)
 
@@ -88,13 +153,37 @@ if __name__ == '__main__':
 
     logger.info('Starting assembly pipeline')
     logger.info('Running the following modes of analysis : AbySS')
-    assembler_path = sys.argv[1]
-    read_one = sys.argv[2]
-    read_two = sys.argv[3]
-    out_path = sys.argv[4]
-    assembler_param = int(sys.argv[5])
-    threads = '4'
-    assembler = Abyss(assembler_path, out_path, threads)
-    retcode = assembler.abyss(read_one, read_two, assembler_param)
+
+    abyss_params = argparse.ArgumentParser(prog="Abyss runner")
+    abyss_params.add_argument('--abyss', type=str, default=abyss_default,
+                              help='Path to AbySS executable')
+    abyss_params.add_argument('--input', type=str, default=inputs,
+                              help='Path to input folder')
+    abyss_params.add_argument('--outdir', type=str, dest='out_path',
+                              default=out_path,
+                              help='Path to output directory')
+    abyss_params.add_argument('--params', type=int, default=params,
+                              help='Abyss k-mer size')
+    abyss_params.add_argument('--threads', type=str, default=threads,
+                              help='Number of threads allocated')
+
+    aopts = abyss_params.parse_args() 
+    #input_config = open(aopts.input)
+    config = main(aopts.input)
+#    config = dict()
+#    for lines in input_config:
+#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
+#        lines = lines.split(', ')
+#        if lines[0] == 'Samples':
+#            continue
+#        else:
+#            files = glob.glob(lines[2])
+#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
+#
+    assembler = Abyss(aopts.abyss, config,
+                              aopts.params, aopts.out_path, aopts.threads)
+    aret = assembler.abyss()
     contigs = assembler.result
+    print(aret)
     print(contigs)
+
