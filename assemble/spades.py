@@ -17,12 +17,14 @@ from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 from collections import namedtuple
-from assemble.prepinputs import main
+from assemble.prepinputs import Prepper
 
-logger = logging.getLogger('Assembler')
+logger = logging.getLogger('Nutcracker')
+
 class Spades:
+
     def __init__(self, spades_path, config, kmers, out_path, threads ):
-        logger = logging.getLogger('Assembler')
+        logger = logging.getLogger('Nutcracker')
         #Initialize values and create output directories
         self.spades_path = spades_path
         self.config = config
@@ -94,13 +96,12 @@ if __name__ == '__main__':
     
     #Define defaults
     spades_default = '/projects/home/sravishankar9/tools/SPAdes-3.9.0-Linux/bin/spades.py'
-    inputs = '/projects/home/sravishankar9/projects/Assembler/fq/test.config'
     out_path = '/projects/home/sravishankar9/projects/Assembler/local/spades'
     params = '23,49,71,93,115,127'
     threads = '4'
 
     # create logger
-    logger = logging.getLogger('Assembler')
+    logger = logging.getLogger('Nutcracker')
     logger.setLevel(logging.DEBUG)
 
     # create console handler and set level to debug
@@ -134,20 +135,9 @@ if __name__ == '__main__':
                               help='Number of threads allocated')
 
     sopts = spades_params.parse_args() 
-#    input_config = open(sopts.input)
-    config = main(sopts.input)
-#        config = dict()
-#    for lines in input_config:
-#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
-#        lines = lines.strip().split(', ')
-#        if lines[0] == 'Samples':
-#            continue
-#        else:
-#            files = glob.glob(lines[2])
-#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
-
-    assembler = Spades(sopts.spades, config,
-                              sopts.params, sopts.out_path, sopts.threads)
+    prepper = Prepper(sopts.input)
+    config = prepper.prepInputs(sopts.input)
+    assembler = Spades(sopts.spades, config, sopts.params, sopts.out_path, sopts.threads)
     sret = assembler.spades()
     contigs = assembler.result
     print(sret)
