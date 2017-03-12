@@ -17,11 +17,12 @@ from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 from collections import namedtuple
-from assemble.prepinputs import main
-logger = logging.getLogger('Assembler')
+from assemble.prepinputs import Prepper
+
+logger = logging.getLogger('Nutcracker')
 class Fermi:
     def __init__(self, fermi_path, config, out_path, fermi_runner, threads ):
-        logger = logging.getLogger('Assembler')
+        logger = logging.getLogger('Nutcracker')
         #Initialize values and create output directories
         self.fermi_path = fermi_path
         self.config = config
@@ -112,7 +113,7 @@ if __name__ == '__main__':
     threads = '4'
 
     # create logger
-    logger = logging.getLogger('Assembler')
+    logger = logging.getLogger('Nutcracker')
     logger.setLevel(logging.DEBUG)
 
     # create console handler and set level to debug
@@ -146,18 +147,8 @@ if __name__ == '__main__':
                               help='Number of threads allocated')
 
     fopts = fermi_params.parse_args() 
-    config = main(fopts.config)
-#    input_config = open(fopts.config)
-#    config = dict()
-#    for lines in input_config:
-#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
-#        lines = lines.strip().split(', ')
-#        if lines[0] == 'Samples':
-#            continue
-#        else:
-#            files = glob.glob(lines[2])
-#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
-#
+    prepper = Prepper(fopts.config)
+    config = prepper.prepInput()
     assembler = Fermi(fopts.fermi, config,
                               fopts.out_path, fopts.params, fopts.threads)
     fret = assembler.fermi()
