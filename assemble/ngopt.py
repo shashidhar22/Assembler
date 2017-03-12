@@ -16,15 +16,14 @@ from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
+from assemble.prepinputs import Prepper
 
-logger = logging.getLogger('Assembler')
+logger = logging.getLogger('Nutcracker')
 class Ngopt:
     def __init__(self, ngopt_path, config, name, out_path, threads):
         #Initialize values and create output directories
         self.ngopt_path = ngopt_path
-
-        self.rone = os.path.abspath()
-        self.rtwo = os.path.abspath(rtwo)
+        self.config = config
         self.out_path = '{0}/ngopt'.format(os.path.abspath(out_path))
         self.threads = threads
         self.name = name
@@ -34,6 +33,14 @@ class Ngopt:
         if not os.path.exists(self.out_path):
             os.mkdir(self.out_path)
 
+        self.lib = '{0}/ngopt_lib.lf'.format(self.out_path)
+        lib_file = open(self.lib, 'w')
+        for library in config:
+            lib_file.write('[LIB]\n')
+            if library.paired and library.prep ==  "Short":
+                lib_file.write('p1={0}\np2={1}\nins=350\n')
+            else:
+                lib_file.write('up={0}')
         return
     
     def ngopt(self):
@@ -46,18 +53,21 @@ class Ngopt:
         logger.debug('Changing working directory to : {0}'.format(self.out_path))
         os.chdir(self.out_path)
         runlogger = open(self.runtime, 'w')
-        ncmd = [self.ngopt_path, self.rone, self.rtwo, './'] 
+        ncmd = [self.ngopt_path, self.lib, './'] 
         logger.debug('Running NGOPT with the following command')
         logger.debug('{0}'.format(' '.join(ncmd)))
         #Run NGOPT 
-        nrun = subprocess.Popen(ncmd, stdout=runlogger,
-            stderr=runlogger)
+        nrun = subprocess.Popen(ncmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
 
         #Capture stdout and stderr
         nlog = nrun.communicate()
-        runlogger.flush()
-        runlogger.close()
         elapsed = timeit.default_timer() - start
+
+        for logs in nlog:
+            log = logs.decode('utf-8').split('\n')
+            for lines in log:
+                logger.debug(lines)            
 
         if nrun.returncode != 0 :
             logger.error('NGOPT failed with exit code : {0}; Check runtime log for details'.format(nrun.returncode))
@@ -71,14 +81,15 @@ if __name__ == '__main__':
     
     #Define defaults
     ngopt_default = '/projects/home/sravishankar9/tools/a5_miseq_linux_20150522/bin/a5_pipeline.pl'
-    rone = '/projects/home/sravishankar9/projects/Assembler/fq/test_miseq_r1.fastq'
-    rtwo = '/projects/home/sravishankar9/projects/Assembler/fq/test_miseq_r2.fastq'
+    # rone = '/projects/home/sravishankar9/projects/Assembler/fq/test_miseq_r1.fastq'
+    # rtwo = '/projects/home/sravishankar9/projects/Assembler/fq/test_miseq_r2.fastq'
+    input_path = '/projects/home/sravishankar9/data/malaria/rawData'
     out_path = '/projects/home/sravishankar9/projects/Assembler/local/ngopt'
     params = 'sample'
     threads = '4'
     # create logger
     FORMAT = '%{asctime}-15s : %{levelname}-8s : %{message}s'
-    logger = logging.getLogger('Assembler')
+    logger = logging.getLogger('Nutcracker')
     logger.setLevel(logging.DEBUG)
 
     # create console handler and set level to debug
@@ -99,11 +110,9 @@ if __name__ == '__main__':
 
     ngopt_params = argparse.ArgumentParser(prog="NGOPT runner")
     ngopt_params.add_argument('--ngopt', type=str, default=ngopt_default,
-                              help='Path to AbySS executable')
-    ngopt_params.add_argument('--rone', type=str, default=rone,
-                              help='Path to read one')
-    ngopt_params.add_argument('--rtwo', type=str, default=rtwo,
-                              help='Path to read two')
+                              help='Path to NGOPT executable')
+    ngopt_params.add_argument('--inputs', type=str, default=input_path,
+                              help='Path to input directory')
     ngopt_params.add_argument('--outdir', type=str, dest='out_path',
                               default=out_path,
                               help='Path to output directory')
@@ -113,7 +122,10 @@ if __name__ == '__main__':
                               help='Number of threads allocated')
 
     nopts = ngopt_params.parse_args() 
-    assembler = Ngopt(nopts.ngopt, nopts.rone, nopts.rtwo,
+
+    prepper = Prepper(nopts.inputs)
+    config = prepper.prepInputs()
+    assembler = Ngopt(nopts.ngopt, config,
                               nopts.params, nopts.out_path, nopts.threads)
     nret = assembler.ngopt()
     contigs = assembler.result
