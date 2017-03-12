@@ -13,17 +13,19 @@ import subprocess
 import configparser
 import collections
 from Bio import SeqIO
+from uuid import uuid4
 from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 from collections import namedtuple
 from assemble.readers import Fastq
-from assemble.prepinputs import main
+from assemble.prepinputs import Prepper
 
-logger = logging.getLogger('Assembler')
+logger = logging.getLogger('Nutcracker')
+
 class Sga:
     def __init__(self, sga_path, config, sga_param, out_path, threads):
-        logger = logging.getLogger('Assembler')
+        logger = logging.getLogger('Nutcracker')
         #Initialize values and create output directories
         sga_param = sga_param.split(',')
         self.name = 'sample'
@@ -167,6 +169,51 @@ class Sga:
             logger.info('Corrected fastq file can be found at : {0}'.format(self.correct))
             return(crun.returncode)
 
+    def splitter(self, file_list):
+        fin_list = list()
+        mid = len(file_list)/2
+        fin_list = [file_list[:mid], file_list[mid:]]
+        return(fin_list)
+
+    def sgaMerge(self, file_list):
+        '''Run SGA Merge'''
+        #Start logging
+        start = timeit.default_timer()
+
+        #Prepare correction commands
+        logger.info('SGA merge started')
+        logger.info('Merging {0} files'.format(len(file_list)))
+        if len(file_list) == 2:
+            ext = os.path.splitext(self.file_list[0])[1]
+            prefix = '{0}/{1}'.format(self.out_path, uuid4(), ext)
+            mcmd = [self.sga_path, 'merge', '-r', '-p', prefix, file_list[0], file_list[1]]
+            logger.debug('Running SGA merge with the following command')
+            logger.debug('{0}'.format(' '.join(ccmd)))
+
+            #Run SGA correct
+            mrun = subprocess.Popen(mcmd, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
+            #Capture stdout and stderr
+            mlog = mrun.communicate()
+            elapsed = timeit.default_timer() - start
+
+            for logs in mlog:
+                log = logs.decode('utf-8').split('\n')
+                for lines in log:
+                    logger.debug(lines)
+
+            if mrun.returncode != 0:
+                logger.error('SGA merge failed with exit code : {0}; Check runtime log for details.'.format(crun.returncode))
+                sys.exit()
+            else:
+                ret_file = glob.glob('{0}.*'.format(prefix))[0]
+                logger.info('SGA merge completed successfully; Runtime : {0}'.format(elapsed))
+                logger.info('Merged file can be found at : {0}'.format(ret_file))
+                return([ret_file])
+        elif len(file_list) > 2:
+            split_list = self.splitter(file_list)
+            return(sgaMerge(split_list[0]) + sgaMerge(split_list[1]))
+
     def sgaFilter(self):
         '''Run SGA Filter'''
         #Start logging
@@ -237,11 +284,11 @@ class Sga:
         start = timeit.default_timer()
 
         #Prepare assemble commands
-        logger.write('SGA assemble started\n')
+        logger.info('SGA assemble started')
         acmd = [self.sga_path, 'assemble', '-t', self.threads, '-m', str(self.akmer), 
                 '-o', self.assemble, self.overlap]
-        logger.write('Running SGA assemble with the following command\n')
-        logger.write('{0}\n'.format(' '.join(acmd)))
+        logger.info('Running SGA assemble with the following command')
+        logger.info('{0}'.format(' '.join(acmd)))
 
         #Run SGA assemble
         arun = subprocess.Popen(acmd, stdout=runlogger,
@@ -249,7 +296,7 @@ class Sga:
         #Capture stdout and stderr
         alog = arun.communicate()
         elapsed = timeit.default_timer() - start
-        runlogger.write('\nSGA assemble runtime logs:\n')
+        # runlogger.write('\nSGA assemble runtime logs:\n')
 
         for logs in alog:
             log = logs.decode('utf-8').split('\n')
@@ -266,16 +313,18 @@ class Sga:
 
     def sgaRun(self):
         '''Run SGA assembly pipeline'''
-        #Prep inputs
-        self.prepInp()
+        
+        #prepInp()
+        preprocess_list = list()
+        index_list = list()
 
         #Call pre process
-        ret = self.sgaPreProcess()
+        ret, sample_processed = self.sgaPreProcess(samples.files)
         if ret != 0:
             return(ret)
 
         #call index
-        ret = self.sgaIndex()
+        ret, sample_indexed = self.sgaIndex(sample_processed)
         if ret != 0:
             return(ret)
 
@@ -350,17 +399,7 @@ if __name__ == '__main__':
 
     sopts = sga_params.parse_args() 
     config = main(sopts.config)
-#    input_config = open(sopts.config)
-#    config = dict()
-#    for lines in input_config:
-#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
-#        lines = lines.strip().split(', ')
-#        if lines[0] == 'Samples':
-#            continue
-#        else:
-#            files = glob.glob(lines[2])
-#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
-#
+
     assembler = Sga(sopts.sga, config,
                               sopts.params, sopts.out_path, sopts.threads)
     sret = assembler.sgaRun()
