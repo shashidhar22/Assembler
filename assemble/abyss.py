@@ -17,9 +17,9 @@ from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 from collections import namedtuple
-from assemble.prepinputs import main
+from assemble.prepinputs import Prepper
 
-logger = logging.getLogger('Assembler')
+logger = logging.getLogger('Nutcracker')
 class Abyss:
     def __init__(self, abyss_path, config, klen, outdir, threads ):
         #Initialize values and create output directories
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     threads = '4'
     # create logger
     FORMAT = '%{asctime}-15s : %{levelname}-8s : %{message}s'
-    logger = logging.getLogger('Assembler')
+    logger = logging.getLogger('Nutcracker')
     logger.setLevel(logging.DEBUG)
 
     # create console handler and set level to debug
@@ -169,17 +169,8 @@ if __name__ == '__main__':
 
     aopts = abyss_params.parse_args() 
     #input_config = open(aopts.input)
-    config = main(aopts.input)
-#    config = dict()
-#    for lines in input_config:
-#        Sample = namedtuple('Sample', ['sample', 'library', 'files', 'prep', 'paired'])
-#        lines = lines.split(', ')
-#        if lines[0] == 'Samples':
-#            continue
-#        else:
-#            files = glob.glob(lines[2])
-#            config[lines[1]] = Sample(lines[0], lines[1], files, lines[3], int(lines[4]))
-#
+    prepper = Prepper(aopts.input)
+    config = prepper.prepInputs()
     assembler = Abyss(aopts.abyss, config,
                               aopts.params, aopts.out_path, aopts.threads)
     aret = assembler.abyss()
