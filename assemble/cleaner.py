@@ -10,19 +10,20 @@ import logging
 import argparse
 import itertools
 import subprocess
-import configparser
 import collections
+import configparser
 from Bio import SeqIO
 from itertools import repeat
 from multiprocessing import Pool
 from collections import defaultdict
 
 #All pacbio features will be reintroduced in version 0.9.1
-logger = logging.getLogger('Assembler')
+logger = logging.getLogger('Nutcracker')
+
 class Cleaner:
     def __init__(self, bowtie_path, bbduk_path, out_path, threads):
         
-        logger = logging.getLogger('Assembler')
+        logger = logging.getLogger('Nutcracker')
         #Initialize values 
         self.bowtie_path = os.path.abspath(bowtie_path)
         self.bbduk_path = os.path.abspath(bbduk_path)
@@ -89,10 +90,17 @@ class Cleaner:
         logger.info('Decontamination  of illumina reads  started')
         
         #Setup bowtie command
-        bcmd = [self.bowtie_path, '-p', self.threads, '-x', btindex, '-1', read_one, '-2', read_two,
-                '--un-conc', cread_base, '-S', cread_sam]
-        logger.debug('Running Bowtie with the following command')
-        logger.debug('{0}\n'.format(' '.join(bcmd)))
+        if read_two:
+            bcmd = [self.bowtie_path, '-p', self.threads, '-x', btindex, '-1', read_one, '-2', read_two,
+                    '--un-conc', cread_base, '-S', cread_sam]
+            logger.debug('Running Bowtie with the following command')
+            logger.debug('{0}\n'.format(' '.join(bcmd)))
+        else:
+            bcmd = [self.bowtie_path, '-p', self.threads, '-x', btindex, '-U', ','.join(read_one)
+                    '--un-conc', cread_base, '-S', cread_sam]
+            logger.debug('Running Bowtie with the following command')
+            logger.debug('{0}\n'.format(' '.join(bcmd)))
+
 
     
         #Running bowtie
@@ -111,10 +119,14 @@ class Cleaner:
         if brun.returncode != 0 :
             logger.error('Bowtie failed with exit code : {0}; Check runtime log for details.'.format(brun.returncode))
             return(brun.returncode, None, None, None)
+        elif read_two:
+            logger.info('Bowtie completed successfully; Runtime : {0}'.format(elapsed))
+            logger.info('Decomtaminated reads can be found in : {0}'.format(self.out_path))
+            return(brun.returncode, cread_one, cread_two, cread_sam)
         else:
             logger.info('Bowtie completed successfully; Runtime : {0}'.format(elapsed))
             logger.info('Decontaminated reads can be found in : {0}'.format(self.out_path))
-            return(brun.returncode, cread_one, cread_two, cread_sam)
+            return(brun.returncode, cread_base, None, cread_sam)
 
     def trimIllumina(self, cread_one, cread_two, adapters):
         '''Trim adapters from illumina reads'''
@@ -122,16 +134,29 @@ class Cleaner:
         start = timeit.default_timer()
 
         #Initialize values
-        tread_one = '{0}/cleaned_trimmed_r1.fastq'.format(self.out_path)
-        tread_two = '{0}/cleaned_trimmed_r2.fastq'.format(self.out_path)
+        
+        if cread_two:
+            #If paired end
+            tread_one = '{0}/cleaned_trimmed_r1.fastq'.format(self.out_path)
+            tread_two = '{0}/cleaned_trimmed_r2.fastq'.format(self.out_path)
+        else:
+            #If single reads
+            tread_one = '{0}/cleaned_trimmed.fastq'.format(self.out_path)
+            tread_two = None
 
         #Prepare run commands
         logger.info('Trimming illumina reads\n')
         #Setup bbduk command
-        tcmd = [self.bbduk_path, 'ref={0}'.format(','.join(adapters)), 'in1={0}'.format(cread_one), 
-                'in2={0}'.format(cread_two), 'out1={0}'.format(tread_one), 
-                'out2={0}'.format(tread_two), 'ktrim=r', 'ktrim=1', 'k=27', 'mink=11', 'qtrim=rl',
-                'trimq=30', 'minlength=80', 'overwrite=t']
+        if cread_two:
+            tcmd = [self.bbduk_path, 'ref={0}'.format(','.join(adapters)), 'in={0}'.format(cread_one), 
+                    'in2={0}'.format(cread_two), 'out1={0}'.format(tread_one), 
+                    'out2={0}'.format(tread_two), 'ktrim=r', 'ktrim=1', 'k=27', 'mink=11', 'qtrim=rl',
+                    'trimq=30', 'minlength=80', 'overwrite=t']
+        else:
+            tcmd = [self.bbduk_path, 'ref={0}'.format(','.join(adapters)), 'in={0}'.format(cread_one), 
+                    'out1={0}'.format(tread_one), 'ktrim=r', 'ktrim=1', 'k=27', 'mink=11', 'qtrim=rl',
+                    'trimq=30', 'minlength=80', 'overwrite=t']                                
+
         logger.debug('Running BBDuk with the following command:\n')
         logger.debug('{0}\n'.format(' '.join(tcmd)))
 
@@ -147,10 +172,14 @@ class Cleaner:
         if trun.returncode != 0 :
             logger.error('BBDuk failed with exit code : {0}; Check runtime log for details.\n'.format(trun.returncode))
             return(trun.returncode, None, None)
+        elif cread_two:
+            logger.info('BBDuk completed successfully; Runtime : {0}\n'.format(elapsed))
+            logger.info('Decontaminated reads can be found in : {0}\n'.format(self.out_path))
+            return(trun.returncode, tread_one, tread_two)            
         else:
             logger.info('BBDuk completed successfully; Runtime : {0}\n'.format(elapsed))
             logger.info('Decontaminated reads can be found in : {0}\n'.format(self.out_path))
-            return(trun.returncode, tread_one, tread_two)
+            return(trun.returncode, tread_one, None)
 
 
     def cleanSam(self, cread_sam):
